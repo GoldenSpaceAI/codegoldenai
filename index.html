@@ -2,83 +2,128 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>CodeGoldenAI • Code Smarter</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CodeGoldenAI • AI Website Builder & Code Engineer</title>
   <style>
     :root {
-      --bg: #0a0f1c;
-      --card: #141b2d;
-      --text: #eaf1ff;
-      --muted: #a0a8c3;
-      --gold: #f6c64a;
+      --bg: #070b14;
+      --card: #10182c;
+      --text: #f1f5ff;
+      --muted: #a6b3d1;
+      --gold1: #f6c64a;
       --gold2: #eb8b36;
       --radius: 16px;
-      --shadow: 0 12px 40px rgba(0,0,0,.4);
+      --shadow: 0 20px 60px rgba(0,0,0,.55);
+      --max: 1100px;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      font-family: system-ui, sans-serif;
-      background: var(--bg);
+      font-family: "Segoe UI", Roboto, Arial, sans-serif;
+      background: radial-gradient(1200px 800px at 70% -10%, rgba(246,198,74,.18), transparent 40%),
+                  radial-gradient(900px 700px at 10% 120%, rgba(235,139,54,.18), transparent 40%),
+                  var(--bg);
       color: var(--text);
       line-height: 1.6;
     }
     header {
-      text-align: center;
-      padding: 4rem 1rem;
-      background: radial-gradient(circle at 50% 0%, rgba(246,198,74,.15), transparent 70%);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1.2rem 2rem;
+      max-width: var(--max);
+      margin: 0 auto;
     }
     header h1 {
-      font-size: 2.8rem;
-      background: linear-gradient(90deg, var(--gold), var(--gold2));
+      font-size: 1.6rem;
+      font-weight: bold;
+      background: linear-gradient(45deg, var(--gold1), var(--gold2));
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
     }
-    header p {
-      margin-top: .5rem;
+    nav a {
+      margin-left: 1.5rem;
+      text-decoration: none;
+      color: var(--muted);
+      font-weight: 500;
+      transition: color .2s;
+    }
+    nav a:hover { color: var(--gold1); }
+    .hero {
+      text-align: center;
+      padding: 5rem 1.5rem 3rem;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    .hero h2 {
+      font-size: 2.8rem;
+      line-height: 1.2;
+      margin-bottom: 1rem;
+      background: linear-gradient(45deg, var(--gold1), var(--gold2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .hero p {
       font-size: 1.2rem;
       color: var(--muted);
+      margin-bottom: 2rem;
     }
-    .container {
-      max-width: 1100px;
-      margin: 2rem auto;
-      padding: 0 1rem;
+    .buttons {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      flex-wrap: wrap;
     }
-    .features, .plans {
-      display: grid;
-      gap: 1.5rem;
-      margin: 2rem 0;
-    }
-    .card {
-      background: var(--card);
-      padding: 1.5rem;
+    .btn {
+      padding: 0.9rem 1.6rem;
       border-radius: var(--radius);
+      font-size: 1rem;
+      font-weight: bold;
+      text-decoration: none;
+      cursor: pointer;
+      transition: transform .2s, background .2s;
+      box-shadow: var(--shadow);
+    }
+    .btn-primary {
+      background: linear-gradient(45deg, var(--gold1), var(--gold2));
+      color: #000;
+      border: none;
+    }
+    .btn-primary:hover { transform: translateY(-4px); }
+    .btn-secondary {
+      background: var(--card);
+      border: 2px solid var(--gold1);
+      color: var(--text);
+    }
+    .btn-secondary:hover { background: rgba(246,198,74,.08); }
+    .features {
+      max-width: var(--max);
+      margin: 4rem auto;
+      padding: 0 1.5rem;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 2rem;
+    }
+    .feature {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 2rem;
       box-shadow: var(--shadow);
       text-align: center;
     }
-    .card h3 {
-      color: var(--gold);
-      margin-bottom: .5rem;
+    .feature h3 {
+      margin-bottom: 0.8rem;
+      font-size: 1.4rem;
+      background: linear-gradient(45deg, var(--gold1), var(--gold2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
     }
-    button {
-      margin-top: 1rem;
-      padding: .75rem 1.25rem;
-      border: none;
-      border-radius: var(--radius);
-      background: linear-gradient(90deg, var(--gold), var(--gold2));
-      color: #000;
-      font-weight: bold;
-      cursor: pointer;
-      transition: 0.3s;
-    }
-    button:hover {
-      opacity: .85;
-    }
+    .feature p { color: var(--muted); font-size: 1rem; }
     footer {
       text-align: center;
       padding: 2rem 1rem;
-      font-size: .9rem;
       color: var(--muted);
-      border-top: 1px solid rgba(255,255,255,.1);
+      font-size: 0.9rem;
+      border-top: 1px solid rgba(255,255,255,.08);
       margin-top: 3rem;
     }
   </style>
@@ -86,83 +131,39 @@
 <body>
   <header>
     <h1>CodeGoldenAI</h1>
-    <p>Generate websites with AI • Build with a Code Engineer • Code smarter</p>
+    <nav>
+      <a href="/plans.html">Plans</a>
+      <a href="/playground.html">Playground</a>
+      <a href="/engineer.html">Hire Engineer</a>
+    </nav>
   </header>
 
-  <div class="container">
-    <!-- Features -->
-    <section class="features">
-      <div class="card">
-        <h3>🤖 AI Code Creator</h3>
-        <p>Generate full website code instantly with our advanced AI models.</p>
-        <button onclick="generateAI()">Try Now</button>
-      </div>
-      <div class="card">
-        <h3>👨‍💻 Code Engineer</h3>
-        <p>Work with a professional engineer to build your dream website.</p>
-        <button onclick="requestEngineer()">Request Engineer</button>
-      </div>
-      <div class="card">
-        <h3>💳 Pricing Plans</h3>
-        <p>Flexible plans: Free, Plus, and Pro — choose what fits your needs.</p>
-        <button onclick="loadPlans()">View Plans</button>
-      </div>
-    </section>
+  <section class="hero">
+    <h2>Smarter Websites, Powered by AI + Engineers</h2>
+    <p>Generate professional websites with our advanced AI code creator, or work directly with a Code Engineer for tailor-made solutions. Affordable, fast, and future-ready.</p>
+    <div class="buttons">
+      <a href="/playground.html" class="btn btn-primary">Try AI Playground</a>
+      <a href="/plans.html" class="btn btn-secondary">See Plans</a>
+    </div>
+  </section>
 
-    <!-- Plans -->
-    <section class="plans" id="plans"></section>
-  </div>
+  <section class="features">
+    <div class="feature">
+      <h3>⚡ AI Website Generator</h3>
+      <p>Type what you need and watch AI generate fully functional code for your website in seconds.</p>
+    </div>
+    <div class="feature">
+      <h3>👨‍💻 Code Engineer Service</h3>
+      <p>Need something custom? Work directly with a Code Engineer who will build your site with precision.</p>
+    </div>
+    <div class="feature">
+      <h3>💳 Simple Pricing</h3>
+      <p>From free AI websites every 3 days to unlimited websites with Pro — choose a plan that fits you.</p>
+    </div>
+  </section>
 
   <footer>
-    © 2025 CodeGoldenAI • Built by GoldenSpaceAI
+    © 2025 CodeGoldenAI • Powered by GoldenSpaceAI
   </footer>
-
-  <script>
-    async function loadPlans() {
-      const res = await fetch("/api/plans");
-      const data = await res.json();
-      const container = document.getElementById("plans");
-      container.innerHTML = "";
-
-      for (const [plan, details] of Object.entries(data)) {
-        const div = document.createElement("div");
-        div.className = "card";
-        div.innerHTML = `
-          <h3>${plan.toUpperCase()}</h3>
-          <p>AI Websites: ${details.websitesAI}</p>
-          <p>Engineer: ${details.engineer}</p>
-          <p>Cooldown: ${details.perDays || "—"} days</p>
-        `;
-        container.appendChild(div);
-      }
-    }
-
-    async function generateAI() {
-      const prompt = prompt("Enter what website you want:");
-      if (!prompt) return;
-
-      const res = await fetch("/api/generate-ai", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt })
-      });
-      const data = await res.json();
-      if (data.error) {
-        alert("❌ " + data.error);
-      } else {
-        // Show code in new window
-        const w = window.open();
-        w.document.write("<pre style='white-space: pre-wrap'>" + data.code + "</pre>");
-      }
-    }
-
-    async function requestEngineer() {
-      const res = await fetch("/api/generate-engineer", {
-        method: "POST"
-      });
-      const data = await res.json();
-      alert(data.error || data.message);
-    }
-  </script>
 </body>
 </html>
