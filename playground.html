@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Code Playground • CodeGoldenAI</title>
+  <style>
+    :root {
+      --bg: #0a0f1c;
+      --card: #141b2d;
+      --text: #eaf1ff;
+      --muted: #b8c3dc;
+      --gold1: #f6c64a;
+      --gold2: #eb8b36;
+      --radius: 12px;
+      --shadow: 0 16px 50px rgba(0,0,0,.55);
+    }
+    body {
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      margin: 0;
+      padding: 0;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+    header {
+      padding: 1rem 2rem;
+      background: var(--card);
+      border-bottom: 1px solid rgba(255,255,255,.08);
+      text-align: center;
+      font-weight: bold;
+      background: linear-gradient(90deg, var(--gold1), var(--gold2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      font-size: 1.4rem;
+    }
+    main {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+    .code-box {
+      background: #1c2539;
+      border: 1px solid rgba(246,198,74,.25);
+      border-radius: var(--radius);
+      padding: 1rem;
+      font-family: monospace;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      box-shadow: var(--shadow);
+      position: relative;
+    }
+    .copy-btn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: rgba(246,198,74,.15);
+      border: 1px solid var(--gold1);
+      color: var(--text);
+      font-size: 0.8rem;
+      padding: 0.3rem 0.6rem;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .copy-btn:hover { background: rgba(246,198,74,.25); }
+    .input-area {
+      display: flex;
+      padding: 1rem;
+      background: var(--card);
+      border-top: 1px solid rgba(255,255,255,.08);
+      gap: 0.5rem;
+    }
+    input {
+      flex: 1;
+      padding: 0.8rem;
+      border-radius: var(--radius);
+      border: 1px solid rgba(255,255,255,.2);
+      font-size: 1rem;
+      outline: none;
+      background: #0f1525;
+      color: var(--text);
+    }
+    button {
+      padding: 0.8rem 1.2rem;
+      background: linear-gradient(45deg, var(--gold1), var(--gold2));
+      border: none;
+      border-radius: var(--radius);
+      font-weight: bold;
+      cursor: pointer;
+      color: #000;
+    }
+    button:hover { opacity: 0.9; }
+  </style>
+</head>
+<body>
+  <header>⚡ Code Playground</header>
+
+  <main id="output"></main>
+
+  <div class="input-area">
+    <input id="prompt" type="text" placeholder="Describe the website or code you need..." />
+    <button onclick="generateCode()">Generate</button>
+  </div>
+
+  <script>
+    async function generateCode() {
+      const prompt = document.getElementById("prompt").value.trim();
+      if (!prompt) return;
+
+      const output = document.getElementById("output");
+      const box = document.createElement("div");
+      box.className = "code-box";
+      box.textContent = "⏳ Generating code...";
+      output.appendChild(box);
+      output.scrollTop = output.scrollHeight;
+
+      try {
+        const res = await fetch("/api/generate-ai", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ prompt }),
+        });
+
+        const data = await res.json();
+        if (data.error) {
+          box.textContent = "❌ " + data.error;
+        } else {
+          box.innerHTML = "<button class='copy-btn' onclick='copyCode(this)'>Copy</button>" +
+                          "<pre><code>" + escapeHtml(data.code) + "</code></pre>";
+        }
+      } catch (err) {
+        box.textContent = "❌ Request failed. Try again.";
+      }
+    }
+
+    function escapeHtml(text) {
+      return text.replace(/[&<>"']/g, function(m) {
+        return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]);
+      });
+    }
+
+    function copyCode(btn) {
+      const code = btn.parentElement.innerText.replace("Copy", "").trim();
+      navigator.clipboard.writeText(code);
+      btn.textContent = "Copied!";
+      setTimeout(() => (btn.textContent = "Copy"), 2000);
+    }
+  </script>
+</body>
+</html>
