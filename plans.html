@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Plans • CodeGoldenAI</title>
+  <style>
+    :root {
+      --bg: #070b14;
+      --card: #10182c;
+      --text: #f1f5ff;
+      --muted: #a6b3d1;
+      --gold1: #f6c64a;
+      --gold2: #eb8b36;
+      --radius: 18px;
+      --shadow: 0 20px 60px rgba(0,0,0,.55);
+      --max: 1100px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "Segoe UI", Roboto, Arial, sans-serif;
+      background: radial-gradient(1200px 800px at 70% -10%, rgba(246,198,74,.18), transparent 40%),
+                  radial-gradient(900px 700px at 10% 120%, rgba(235,139,54,.18), transparent 40%),
+                  var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+    }
+    header {
+      text-align: center;
+      padding: 2rem 1rem 1rem;
+    }
+    header h1 {
+      font-size: 2rem;
+      background: linear-gradient(45deg, var(--gold1), var(--gold2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .plans {
+      max-width: var(--max);
+      margin: 3rem auto;
+      padding: 0 1.5rem;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 2rem;
+    }
+    .plan {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 2rem;
+      box-shadow: var(--shadow);
+      text-align: center;
+      border: 2px solid transparent;
+      transition: transform .2s, border .2s;
+    }
+    .plan:hover { transform: translateY(-6px); border-color: var(--gold1); }
+    .plan h2 {
+      margin-bottom: 0.6rem;
+      font-size: 1.6rem;
+      background: linear-gradient(45deg, var(--gold1), var(--gold2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .price {
+      font-size: 1.4rem;
+      margin-bottom: 1rem;
+      color: var(--gold1);
+      font-weight: bold;
+    }
+    ul {
+      list-style: none;
+      margin-bottom: 1.5rem;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+    ul li {
+      margin: 0.6rem 0;
+    }
+    .btn {
+      display: inline-block;
+      padding: 0.8rem 1.4rem;
+      border-radius: var(--radius);
+      font-weight: bold;
+      font-size: 1rem;
+      text-decoration: none;
+      transition: transform .2s, background .2s;
+      cursor: pointer;
+    }
+    .btn-primary {
+      background: linear-gradient(45deg, var(--gold1), var(--gold2));
+      color: #000;
+    }
+    .btn-primary:hover { transform: translateY(-4px); }
+    .btn-secondary {
+      background: transparent;
+      border: 2px solid var(--gold1);
+      color: var(--text);
+    }
+    .btn-secondary:hover { background: rgba(246,198,74,.1); }
+    footer {
+      text-align: center;
+      padding: 2rem 1rem;
+      color: var(--muted);
+      font-size: 0.9rem;
+      border-top: 1px solid rgba(255,255,255,.08);
+      margin-top: 3rem;
+    }
+    /* Highlight Pro plan */
+    .highlight {
+      border: 2px solid var(--gold1);
+      transform: scale(1.05);
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Choose Your Plan</h1>
+    <p>From free AI sites to unlimited websites with a Code Engineer.</p>
+  </header>
+
+  <section class="plans">
+    <!-- Free Plan -->
+    <div class="plan">
+      <h2>Free</h2>
+      <div class="price">$0 / forever</div>
+      <ul>
+        <li>✔ Generate 1 website with AI</li>
+        <li>✔ Every 3 days</li>
+        <li>❌ Code Engineer support</li>
+      </ul>
+      <a href="/playground.html" class="btn btn-secondary">Start Free</a>
+    </div>
+
+    <!-- Plus Plan -->
+    <div class="plan">
+      <h2>Plus</h2>
+      <div class="price">$10 / year</div>
+      <ul>
+        <li>✔ 1 website per month by Engineer</li>
+        <li>✔ Annual subscription</li>
+        <li>❌ Unlimited AI sites</li>
+      </ul>
+      <a href="/engineer.html" class="btn btn-secondary">Get Plus</a>
+    </div>
+
+    <!-- Pro Plan -->
+    <div class="plan highlight">
+      <h2>Pro</h2>
+      <div class="price">$10 / 3 months</div>
+      <ul>
+        <li>✔ Unlimited AI websites</li>
+        <li>✔ Unlimited websites with Engineer</li>
+        <li>✔ Priority support</li>
+      </ul>
+      <a href="/engineer.html" class="btn btn-primary">Go Pro</a>
+    </div>
+  </section>
+
+  <footer>
+    © 2025 CodeGoldenAI • Powered by GoldenSpaceAI
+  </footer>
+</body>
+</html>
