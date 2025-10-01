@@ -89,6 +89,14 @@
       color: white;
     }
     .btn-primary:hover { opacity: 0.9; }
+    .success {
+      margin-top: 1rem;
+      padding: 1rem;
+      border-radius: 10px;
+      background: #e6ffed;
+      color: #1a7f37;
+      display: none;
+    }
   </style>
 </head>
 <body>
@@ -114,9 +122,10 @@
         <li>✅ Advanced Website Generator</li>
       </ul>
       <p><strong>Payment Method:</strong> Tether (USDT) — TRC20 only</p>
-      <div class="wallet">Wallet Address:<br><strong>TCN6eVtHFNtPAJNfebgGGm8c2h71NWYY9P</strong></div>
+      <div class="wallet">Wallet:<br><strong>TCN6eVtHFNtPAJNfebgGGm8c2h71NWYY9P</strong></div>
       <img src="https://i.ibb.co/kxVsnD6/usdt-qr.jpg" alt="USDT TRC20 QR Code" class="qr">
-      <p>📩 After sending, email your payment proof (screenshot) to <a href="mailto:goldenspaceais@gmail.com">goldenspaceais@gmail.com</a></p>
+      <button class="btn btn-primary" onclick="sendProof('Plus')">📩 Submit Proof</button>
+      <div id="plusSuccess" class="success">✅ Request submitted! Wait for approval.</div>
     </div>
 
     <!-- Pro Plan -->
@@ -129,10 +138,40 @@
         <li>✅ Priority Engineer Support</li>
       </ul>
       <p><strong>Payment Method:</strong> Tether (USDT) — TRC20 only</p>
-      <div class="wallet">Wallet Address:<br><strong>TCN6eVtHFNtPAJNfebgGGm8c2h71NWYY9P</strong></div>
+      <div class="wallet">Wallet:<br><strong>TCN6eVtHFNtPAJNfebgGGm8c2h71NWYY9P</strong></div>
       <img src="https://i.ibb.co/kxVsnD6/usdt-qr.jpg" alt="USDT TRC20 QR Code" class="qr">
-      <p>📩 After sending, email your payment proof (screenshot) to <a href="mailto:goldenspaceais@gmail.com">goldenspaceais@gmail.com</a></p>
+      <button class="btn btn-primary" onclick="sendProof('Pro')">📩 Submit Proof</button>
+      <div id="proSuccess" class="success">✅ Request submitted! Wait for approval.</div>
     </div>
   </main>
+
+  <script>
+    async function sendProof(plan) {
+      try {
+        const resUser = await fetch("/api/me");
+        const user = await resUser.json();
+
+        if (!user.loggedIn) {
+          alert("Please log in first.");
+          return;
+        }
+
+        const res = await fetch("/api/send-plan-proof", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ plan })
+        });
+
+        if (res.ok) {
+          document.getElementById(plan.toLowerCase() + "Success").style.display = "block";
+        } else {
+          alert("❌ Failed to submit proof. Try again.");
+        }
+      } catch (err) {
+        console.error(err);
+        alert("Error sending request.");
+      }
+    }
+  </script>
 </body>
 </html>
