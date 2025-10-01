@@ -1,4 +1,4 @@
-// index.js — CodeGoldenAI (serves real index.html)
+// index.js — CodeGoldenAI (serves all pages correctly)
 
 import express from "express";
 import cors from "cors";
@@ -33,33 +33,25 @@ const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-// ✅ Serve index.html (your professional design)
+// ✅ Serve homepage
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "index.html"));
 });
 
-// ✅ Playground page
-app.get("/playground", (req, res) => {
-  res.send(`<h1 style="text-align:center; padding:3rem; color:#444;">
-    ⚡ AI Playground Coming Soon
-  </h1>`);
+// ✅ Serve other pages
+app.get("/plans.html", (req, res) => {
+  res.sendFile(path.join(__dirname, "plans.html"));
 });
 
-// ✅ Plans page
-app.get("/plans", (req, res) => {
-  res.send(`<h1 style="text-align:center; padding:3rem; color:#444;">
-    💳 Plans Page Coming Soon
-  </h1>`);
+app.get("/playground.html", (req, res) => {
+  res.sendFile(path.join(__dirname, "playground.html"));
 });
 
-// ✅ Engineer page
-app.get("/engineer", (req, res) => {
-  res.send(`<h1 style="text-align:center; padding:3rem; color:#444;">
-    👨‍💻 Hire Engineer Page Coming Soon
-  </h1>`);
+app.get("/engineer.html", (req, res) => {
+  res.sendFile(path.join(__dirname, "engineer.html"));
 });
 
-// ✅ API endpoint (for AI code generation)
+// ✅ API endpoint (AI generation)
 app.post("/api/generate-ai", async (req, res) => {
   try {
     const { prompt } = req.body;
@@ -68,7 +60,7 @@ app.post("/api/generate-ai", async (req, res) => {
     const completion = await client.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [
-        { role: "system", content: "You are a coding assistant that generates website code." },
+        { role: "system", content: "You are a professional coding assistant that generates website code in a clean and reliable way." },
         { role: "user", content: prompt }
       ]
     });
