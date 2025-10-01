@@ -1,56 +1,56 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AdvancedAI • GPT-4 Power</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AdvancedAI • Powered by GPT-4</title>
   <style>
-    :root {
-      --gold1: #f6c64a;
-      --gold2: #eb8b36;
-      --dark-bg: #0c0f1a url("https://images.unsplash.com/photo-1504384308090-c894fdcc538d?auto=format&fit=crop&w=1920&q=80") no-repeat center center fixed;
-      --light-bg: #f9fafc url("https://images.unsplash.com/photo-1667373241062-4d1b05f9c5ae?auto=format&fit=crop&w=1920&q=80") no-repeat center center fixed;
-    }
     body {
       margin: 0;
       font-family: "Segoe UI", sans-serif;
-      background-size: cover;
-      background-attachment: fixed;
-      transition: background 0.6s, color 0.6s;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
     }
-    body.dark { background: var(--dark-bg); color: #f1f1f1; }
-    body.light { background: var(--light-bg); color: #222; }
+
+    :root.light {
+      --bg: url("https://images.unsplash.com/photo-1581091012184-5c67d6f64a7d?auto=format&fit=crop&w=1920&q=80") no-repeat center/cover;
+      --overlay: rgba(255,255,255,0.75);
+      --text: #222;
+      --card: #fff;
+      --code: #f5f5f5;
+    }
+    :root.dark {
+      --bg: url("https://images.unsplash.com/photo-1504384308090-c894fdcc538d?auto=format&fit=crop&w=1920&q=80") no-repeat center/cover;
+      --overlay: rgba(0,0,0,0.7);
+      --text: #f0f0f0;
+      --card: #1e1e1e;
+      --code: #2d2d2d;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background: var(--overlay);
+      backdrop-filter: blur(4px);
+      z-index: -1;
+    }
 
     header {
       text-align: center;
       padding: 1rem;
-      font-size: 1.6rem;
       font-weight: bold;
-      background: linear-gradient(45deg, var(--gold1), var(--gold2));
+      font-size: 1.4rem;
+      background: linear-gradient(45deg, #f6c64a, #eb8b36);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
     }
-    .theme-toggle {
-      position: absolute;
-      top: 15px; right: 20px;
-      padding: 0.5rem 1rem;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      background: rgba(255,255,255,0.2);
-      font-weight: bold;
-    }
-    main {
-      max-width: 900px;
-      margin: 2rem auto;
-      padding: 1rem;
-      background: rgba(0,0,0,0.4);
-      border-radius: 16px;
-      backdrop-filter: blur(6px);
-    }
-    body.light main { background: rgba(255,255,255,0.7); }
-    .chat-box {
-      max-height: 65vh;
+
+    #chat {
+      flex: 1;
       overflow-y: auto;
       padding: 1rem;
       display: flex;
@@ -59,168 +59,144 @@
     }
     .msg {
       padding: 1rem;
-      border-radius: 12px;
+      border-radius: 10px;
       max-width: 80%;
-      line-height: 1.4;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
     }
-    .user {
-      align-self: flex-end;
-      background: linear-gradient(45deg, var(--gold1), var(--gold2));
-      color: #000;
-      font-weight: bold;
-    }
-    .ai {
-      align-self: flex-start;
-      background: rgba(255,255,255,0.08);
-    }
-    .code-box {
-      margin-top: 0.5rem;
-      background: #1e1e2f;
-      color: #f1f1f1;
-      padding: 1rem;
+    .user { background: var(--card); align-self: flex-end; }
+    .ai { background: var(--card); align-self: flex-start; }
+
+    pre {
+      background: var(--code);
+      padding: 0.8rem;
       border-radius: 8px;
-      font-family: monospace;
-      white-space: pre-wrap;
-      position: relative;
+      overflow-x: auto;
+      margin-top: 0.5rem;
     }
+
     .copy-btn {
-      position: absolute;
-      top: 8px; right: 8px;
-      background: #333;
-      border: 1px solid var(--gold1);
-      color: #fff;
-      padding: 0.3rem 0.6rem;
-      border-radius: 6px;
-      cursor: pointer;
+      background: #f6c64a;
+      border: none;
+      padding: 0.3rem 0.8rem;
       font-size: 0.8rem;
+      border-radius: 5px;
+      margin-top: 0.3rem;
+      cursor: pointer;
     }
-    body.light .code-box { background: #f4f4f4; color: #111; }
-    .input-area {
+
+    footer {
       display: flex;
-      margin-top: 1rem;
-      gap: 0.5rem;
+      padding: 1rem;
+      background: rgba(255,255,255,0.1);
     }
     input {
       flex: 1;
-      padding: 0.9rem;
-      border-radius: 10px;
+      padding: 0.8rem;
       border: none;
+      border-radius: 8px;
       font-size: 1rem;
     }
     button {
-      padding: 0.9rem 1.4rem;
+      margin-left: 0.5rem;
+      padding: 0.8rem 1rem;
       border: none;
-      border-radius: 10px;
-      background: linear-gradient(45deg, var(--gold1), var(--gold2));
+      border-radius: 8px;
+      background: linear-gradient(45deg,#f6c64a,#eb8b36);
       color: white;
       font-weight: bold;
       cursor: pointer;
     }
+    .theme-toggle {
+      margin-left: 0.5rem;
+      background: #444;
+    }
   </style>
 </head>
 <body class="dark">
-  <header>🚀 AdvancedAI • Powered by GPT-4</header>
-  <button class="theme-toggle" onclick="toggleTheme()">Toggle Theme</button>
+  <header>⚡ AdvancedAI • Powered by GPT-4</header>
 
-  <main>
-    <div class="chat-box" id="chat"></div>
-    <div class="input-area">
-      <input id="prompt" type="text" placeholder="Ask AdvancedAI anything..." />
-      <button onclick="sendMessage()">Send</button>
-    </div>
-  </main>
+  <div id="chat"></div>
+
+  <footer>
+    <input id="prompt" placeholder="Ask AdvancedAI anything..." />
+    <button onclick="sendMessage()">Send</button>
+    <button class="theme-toggle" onclick="toggleTheme()">🌓</button>
+  </footer>
 
   <script>
-    const chatBox = document.getElementById("chat");
-    let messages = JSON.parse(localStorage.getItem("adv_ai_msgs")) || [];
+    const chat = document.getElementById("chat");
+    const input = document.getElementById("prompt");
+    let messages = JSON.parse(localStorage.getItem("advancedai_msgs")) || [];
 
-    // Render messages
+    // Render chat messages
     function renderMessages() {
-      chatBox.innerHTML = "";
+      chat.innerHTML = "";
       messages.forEach(m => {
         const div = document.createElement("div");
         div.className = "msg " + (m.role === "user" ? "user" : "ai");
-
-        if (m.role === "ai") {
-          // AI text outside code box
-          div.innerHTML = "<div>" + m.text + "</div>";
-
-          if (m.code) {
-            const codeBox = document.createElement("div");
-            codeBox.className = "code-box";
-            codeBox.innerHTML =
-              "<button class='copy-btn' onclick='copyCode(this)'>Copy</button><pre><code>" +
-              escapeHtml(m.code) +
-              "</code></pre>";
-            div.appendChild(codeBox);
-          }
-        } else {
-          div.textContent = m.text;
+        div.innerHTML = `<div>${m.text}</div>`;
+        if (m.code) {
+          const pre = document.createElement("pre");
+          pre.textContent = m.code;
+          const copy = document.createElement("button");
+          copy.className = "copy-btn";
+          copy.textContent = "Copy Code";
+          copy.onclick = () => {
+            navigator.clipboard.writeText(m.code);
+            copy.textContent = "Copied!";
+            setTimeout(() => (copy.textContent = "Copy Code"), 1500);
+          };
+          div.appendChild(pre);
+          div.appendChild(copy);
         }
-
-        chatBox.appendChild(div);
+        chat.appendChild(div);
       });
-      chatBox.scrollTop = chatBox.scrollHeight;
+      chat.scrollTop = chat.scrollHeight;
     }
 
-    renderMessages();
-
+    // Send message
     async function sendMessage() {
-      const prompt = document.getElementById("prompt").value.trim();
+      const prompt = input.value.trim();
       if (!prompt) return;
+      input.value = "";
 
+      // Add user message
       messages.push({ role: "user", text: prompt });
       if (messages.length > 20) messages.shift();
-
       renderMessages();
-      document.getElementById("prompt").value = "";
 
-      const div = document.createElement("div");
-      div.className = "msg ai";
-      div.textContent = "⏳ Thinking...";
-      chatBox.appendChild(div);
+      // Fetch AI reply
+      const res = await fetch("/api/generate-advanced", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt }),
+      });
 
-      try {
-        const res = await fetch("/api/generate-advanced", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ prompt })
-        });
+      if (res.ok) {
         const data = await res.json();
-        chatBox.removeChild(div);
-
-        const aiMsg = {
-          role: "ai",
-          text: "Here’s your result:",
-          code: data.code
-        };
-        messages.push(aiMsg);
+        messages.push({ role: "ai", text: data.text, code: data.code });
         if (messages.length > 20) messages.shift();
-
+        localStorage.setItem("advancedai_msgs", JSON.stringify(messages));
         renderMessages();
-        localStorage.setItem("adv_ai_msgs", JSON.stringify(messages));
-      } catch {
-        div.textContent = "❌ Error connecting to AI.";
+      } else {
+        messages.push({ role: "ai", text: "⚠️ Error generating response." });
+        renderMessages();
       }
     }
 
-    function copyCode(btn) {
-      const code = btn.parentElement.innerText.replace("Copy", "").trim();
-      navigator.clipboard.writeText(code);
-      btn.textContent = "Copied!";
-      setTimeout(() => (btn.textContent = "Copy"), 2000);
-    }
-
-    function escapeHtml(text) {
-      return text.replace(/[&<>\"']/g, m =>
-        ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[m])
-      );
-    }
-
+    // Theme toggle
     function toggleTheme() {
-      document.body.classList.toggle("dark");
-      document.body.classList.toggle("light");
+      const body = document.body;
+      if (body.classList.contains("dark")) {
+        body.classList.remove("dark");
+        body.classList.add("light");
+      } else {
+        body.classList.remove("light");
+        body.classList.add("dark");
+      }
     }
+
+    renderMessages();
   </script>
 </body>
 </html>
