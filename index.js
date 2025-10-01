@@ -1,4 +1,4 @@
-// index.js — CodeGoldenAI with Google Login as entry page
+// index.js — CodeGoldenAI with Google Login + HTTPS fix
 
 import express from "express";
 import cors from "cors";
@@ -17,6 +17,14 @@ const PORT = process.env.PORT || 10000;
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// ✅ Force HTTPS (fix redirect_uri_mismatch)
+app.use((req, res, next) => {
+  if (req.headers["x-forwarded-proto"] !== "https") {
+    return res.redirect("https://" + req.headers.host + req.url);
+  }
+  next();
+});
 
 // Middleware
 app.use(cors());
@@ -39,7 +47,7 @@ passport.deserializeUser((obj, done) => done(null, obj));
 passport.use(new GoogleStrategy({
     clientID: process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    callbackURL: "/auth/google/callback",
+    callbackURL: "/auth/google/callback", // relative, Express + Render handle domain
   },
   (accessToken, refreshToken, profile, done) => {
     return done(null, profile);
@@ -90,11 +98,12 @@ app.get("/dashboard", (req, res) => {
     <p>Email: ${req.user.emails[0].value}</p>
     <a href="/plans.html">View Plans</a> |
     <a href="/playground.html">Playground</a> |
+    <a href="/engineer.html">Hire Engineer</a> |
     <a href="/logout">Logout</a>
   `);
 });
 
-// Other static pages
+// Other static pages (protected)
 app.get("/plans.html", (req, res) => {
   if (!req.user) return res.redirect("/login.html");
   res.sendFile(path.join(__dirname, "plans.html"));
@@ -129,7 +138,8 @@ app.post("/api/generate-ai", async (req, res) => {
   }
 });
 
-// Serve static files (login.html, qr, etc.)
+// ✅ Serve static files (login.html, qr image, css, etc.)
 app.use(express.static(__dirname));
 
+// Start server
 app.listen(PORT, () => console.log(`✅ CodeGoldenAI running at http://localhost:${PORT}`));
