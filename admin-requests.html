@@ -6,108 +6,147 @@
   <title>Admin Requests • CodeGoldenAI</title>
   <style>
     body {
+      margin: 0;
       font-family: "Segoe UI", sans-serif;
       background: #f7fafc;
-      padding: 2rem;
       color: #222;
     }
-    h1 {
+    header {
+      background: linear-gradient(45deg, #f6c64a, #eb8b36);
+      color: white;
       text-align: center;
-      margin-bottom: 2rem;
-      color: #eb8b36;
+      padding: 1.2rem;
+      font-size: 1.6rem;
+      font-weight: bold;
+    }
+    main {
+      max-width: 1000px;
+      margin: 2rem auto;
+      padding: 1rem;
+      background: #fff;
+      border-radius: 14px;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.08);
     }
     table {
       width: 100%;
       border-collapse: collapse;
-      margin-bottom: 2rem;
     }
     th, td {
-      padding: 0.8rem;
-      border-bottom: 1px solid #ddd;
+      padding: 12px 15px;
       text-align: left;
+      border-bottom: 1px solid #ddd;
     }
     th {
-      background: #f6c64a;
-      color: #222;
+      background: #f1f1f1;
     }
-    button {
+    tr:hover { background: #fafafa; }
+    .btn {
       padding: 0.5rem 1rem;
       border: none;
       border-radius: 6px;
+      font-size: 0.9rem;
       font-weight: bold;
       cursor: pointer;
     }
-    .approve {
-      background: #28a745;
+    .btn-approve {
+      background: #25d366;
       color: white;
     }
-    .decline {
-      background: #dc3545;
+    .btn-decline {
+      background: #ff6262;
       color: white;
     }
-    .approve:hover { opacity: 0.9; }
-    .decline:hover { opacity: 0.9; }
+    .status {
+      font-weight: bold;
+    }
+    .active {
+      color: #1a7f37;
+    }
+    .expired {
+      color: #b00020;
+    }
   </style>
 </head>
 <body>
-  <h1>📋 Pending Upgrade Requests</h1>
-  <table id="requestsTable">
-    <thead>
-      <tr>
-        <th>Email</th>
-        <th>Requested Plan</th>
-        <th>Actions</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
+  <header>🛠 Admin Panel — Pending & Active Plans</header>
+  <main>
+    <table>
+      <thead>
+        <tr>
+          <th>Email</th>
+          <th>Requested Plan</th>
+          <th>Requested On</th>
+          <th>Status</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody id="requestsTable">
+        <tr><td colspan="5">Loading...</td></tr>
+      </tbody>
+    </table>
+  </main>
 
   <script>
-    async function loadRequests() {
+    async function fetchRequests() {
       const res = await fetch("/api/admin/requests");
       const requests = await res.json();
+      const table = document.getElementById("requestsTable");
+      table.innerHTML = "";
 
-      const tbody = document.querySelector("#requestsTable tbody");
-      tbody.innerHTML = "";
-
-      if (requests.length === 0) {
-        tbody.innerHTML = "<tr><td colspan='3'>✅ No pending requests</td></tr>";
+      if (!requests.length) {
+        table.innerHTML = `<tr><td colspan="5">✅ No pending requests</td></tr>`;
         return;
       }
 
-      requests.forEach(r => {
-        const row = document.createElement("tr");
-        row.innerHTML = `
-          <td>${r.email}</td>
-          <td>${r.plan}</td>
+      requests.forEach(req => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${req.email}</td>
+          <td>${req.plan}</td>
+          <td>${new Date(req.date).toLocaleString()}</td>
+          <td class="status ${req.status === "active" ? "active" : req.status === "expired" ? "expired" : ""}">
+            ${req.status === "active" ? "Active until " + new Date(req.expiry).toLocaleDateString() : req.status}
+          </td>
           <td>
-            <button class="approve" onclick="approve('${r.email}','${r.plan}')">Approve</button>
-            <button class="decline" onclick="decline('${r.email}')">Decline</button>
+            ${req.status === "pending" ? `
+              <button class="btn btn-approve" onclick="approve('${req.email}','${req.plan}')">Approve</button>
+              <button class="btn btn-decline" onclick="decline('${req.email}')">Decline</button>
+            ` : "—"}
           </td>
         `;
-        tbody.appendChild(row);
+        table.appendChild(tr);
       });
     }
 
     async function approve(email, plan) {
-      await fetch("/api/admin/approve", {
+      const res = await fetch("/api/admin/approve", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, plan })
       });
-      loadRequests();
+      if (res.ok) {
+        alert(`✅ Approved ${plan} for ${email}`);
+        fetchRequests();
+      } else {
+        alert("❌ Failed to approve request.");
+      }
     }
 
     async function decline(email) {
-      await fetch("/api/admin/decline", {
+      const res = await fetch("/api/admin/decline", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email })
       });
-      loadRequests();
+      if (res.ok) {
+        alert(`❌ Declined request for ${email}`);
+        fetchRequests();
+      } else {
+        alert("Failed to decline request.");
+      }
     }
 
-    loadRequests();
+    fetchRequests();
   </script>
 </body>
 </html>
