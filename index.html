@@ -40,6 +40,7 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
+      gap: 1rem;
     }
     nav h1 {
       font-size: 1.8rem;
@@ -56,6 +57,47 @@
       transition: color .2s;
     }
     nav a:hover { color: var(--gold2); }
+
+    /* Profile box */
+    .profile {
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+      background: var(--card);
+      padding: 0.4rem 0.8rem;
+      border-radius: 40px;
+      box-shadow: var(--shadow);
+    }
+    .profile img {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      border: 2px solid var(--gold1);
+    }
+    .profile-info {
+      display: flex;
+      flex-direction: column;
+      font-size: 0.8rem;
+      line-height: 1.2;
+    }
+    .profile-info strong {
+      color: var(--text);
+    }
+    .profile-info span {
+      color: var(--muted);
+      font-size: 0.75rem;
+    }
+    .logout-btn {
+      background: linear-gradient(45deg, var(--gold1), var(--gold2));
+      border: none;
+      border-radius: 20px;
+      padding: 0.4rem 0.9rem;
+      font-size: 0.75rem;
+      font-weight: bold;
+      cursor: pointer;
+      color: white;
+      margin-left: 0.5rem;
+    }
 
     /* Hero */
     .hero {
@@ -117,9 +159,13 @@
       border-radius: var(--radius);
       text-align: center;
       box-shadow: var(--shadow);
-      transition: transform .3s;
+      transition: transform .3s, box-shadow .3s;
+      cursor: pointer;
     }
-    .feature:hover { transform: translateY(-8px); }
+    .feature:hover { 
+      transform: translateY(-8px);
+      box-shadow: 0 25px 60px rgba(0,0,0,0.2);
+    }
     .feature h3 {
       font-size: 1.4rem;
       margin-bottom: 0.8rem;
@@ -150,6 +196,15 @@
       <a href="/playground.html">Playground</a>
       <a href="/engineer.html">Hire Engineer</a>
     </div>
+    <!-- Profile box -->
+    <div class="profile" id="profileBox" style="display:none;">
+      <img id="profilePic" src="" alt="Profile">
+      <div class="profile-info">
+        <strong id="profileEmail">user@email.com</strong>
+        <span id="profilePlan">Free</span>
+      </div>
+      <button class="logout-btn" onclick="logout()">Logout</button>
+    </div>
   </nav>
 
   <!-- Hero -->
@@ -164,23 +219,44 @@
 
   <!-- Features -->
   <section class="features">
-    <div class="feature">
+    <a class="feature" href="/playground.html">
       <h3>⚡ AI Website Generator</h3>
       <p>Type your idea and watch AI generate complete HTML, CSS, and JS in seconds.</p>
-    </div>
-    <div class="feature">
+    </a>
+    <a class="feature" href="/playground.html">
       <h3>🤖 AdvancedAI (Gemini Pro)</h3>
       <p>Use next-gen AI power for scalable, professional web applications.</p>
-    </div>
-    <div class="feature">
+    </a>
+    <a class="feature" href="/engineer.html">
       <h3>👨‍💻 Real Engineers</h3>
       <p>Need human precision? Hire skilled engineers to build exactly what you want.</p>
-    </div>
+    </a>
   </section>
 
   <!-- Footer -->
   <footer>
     © 2025 CodeGoldenAI • Part of GoldenSpaceAI
   </footer>
+
+  <script>
+    async function loadProfile() {
+      try {
+        const res = await fetch("/api/me");
+        const data = await res.json();
+        if (data.loggedIn) {
+          document.getElementById("profilePic").src = data.picture || "https://via.placeholder.com/36";
+          document.getElementById("profileEmail").textContent = data.email;
+          document.getElementById("profilePlan").textContent = data.plan;
+          document.getElementById("profileBox").style.display = "flex";
+        }
+      } catch (err) {
+        console.error("Failed to load profile:", err);
+      }
+    }
+    function logout() {
+      window.location.href = "/logout";
+    }
+    loadProfile();
+  </script>
 </body>
 </html>
