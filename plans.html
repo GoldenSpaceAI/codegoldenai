@@ -94,11 +94,12 @@
       width: 100%;
       text-align: center;
       box-shadow: var(--shadow);
+      position: relative;
       animation: pop .3s ease;
     }
     @keyframes pop { from{transform:scale(.9);opacity:0} to{transform:scale(1);opacity:1} }
     .modal img {
-      max-width: 200px;
+      max-width: 220px;
       margin: 1rem auto;
       display: block;
     }
@@ -120,6 +121,7 @@
       border-radius: 6px;
       cursor: pointer;
     }
+    .copy-btn:hover { background: #009dff; }
     .close {
       position: absolute;
       top: 15px;
@@ -177,11 +179,11 @@
     <div class="modal-content">
       <span class="close" onclick="closeModal()">×</span>
       <h2 id="planTitle">Upgrade</h2>
-      <p>Send the exact amount to this wallet:</p>
-      <img src="WhatsApp Image 2025-10-01 at 16.10.12.jpeg" alt="USDT QR Code"/>
+      <p>Send the exact amount to this wallet (TRC20 USDT):</p>
+      <img src="/USTD QR.jpeg" alt="USDT QR Code"/>
       <div class="wallet" id="walletAddr">TCN6eVtHFNtPAJNfebgGGm8c2h71NWYY9P</div>
       <button class="copy-btn" onclick="copyWallet()">Copy Address</button>
-      <p style="margin-top:1rem;font-size:.9rem;">After payment, click below to email proof:</p>
+      <p style="margin-top:1rem;font-size:.9rem;">After payment, click below and attach an image of your receipt:</p>
       <a id="proofLink" class="btn" href="#">I Paid – Send Proof</a>
     </div>
   </div>
@@ -197,7 +199,8 @@
       const mailto = 
         "mailto:goldenspaceais@gmail.com"
         + "?subject=Payment Proof for " + plan + " Plan"
-        + "&body=Hello,%0D%0A%0D%0AI have paid " + price + " USDT (TRC20)%0D%0APlan: " + plan + "%0D%0AEmail: [your email here]%0D%0A%0D%0APlease find attached my receipt.%0D%0A";
+        + "&body=Hello,%0D%0A%0D%0AI have paid " + price + " USDT (TRC20).%0D%0APlan: " + plan 
+        + "%0D%0AEmail: [your email here]%0D%0A%0D%0APlease find attached an image of my receipt.%0D%0A";
       document.getElementById("proofLink").href = mailto;
       document.getElementById("paymentModal").style.display = "flex";
     }
