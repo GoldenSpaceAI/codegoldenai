@@ -1,4 +1,4 @@
-// index.js — CodeGoldenAI (serves all pages correctly)
+// index.js — CodeGoldenAI with Google Login as entry page
 
 import express from "express";
 import cors from "cors";
@@ -8,12 +8,13 @@ import session from "express-session";
 import { OpenAI } from "openai";
 import path from "path";
 import { fileURLToPath } from "url";
+import passport from "passport";
+import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 
 dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 10000;
 
-// Required for __dirname in ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -24,53 +25,111 @@ app.use(
   session({
     secret: process.env.SESSION_SECRET || "render_secret",
     resave: false,
-    saveUninitialized: true,
+    saveUninitialized: false,
   })
 );
+app.use(passport.initialize());
+app.use(passport.session());
 
-// OpenAI client
-const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+// Passport serialize/deserialize
+passport.serializeUser((user, done) => done(null, user));
+passport.deserializeUser((obj, done) => done(null, obj));
+
+// ✅ Google OAuth strategy
+passport.use(new GoogleStrategy({
+    clientID: process.env.GOOGLE_CLIENT_ID,
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    callbackURL: "/auth/google/callback",
+  },
+  (accessToken, refreshToken, profile, done) => {
+    return done(null, profile);
+  }
+));
+
+// ✅ Google login routes
+app.get("/auth/google",
+  passport.authenticate("google", { scope: ["profile", "email"] })
+);
+
+app.get("/auth/google/callback",
+  passport.authenticate("google", { failureRedirect: "/login.html" }),
+  (req, res) => {
+    res.redirect("/dashboard");
+  }
+);
+
+app.get("/logout", (req, res) => {
+  req.logout(() => {
+    res.redirect("/login.html");
+  });
 });
 
-// ✅ Serve homepage
+// ✅ API endpoint to expose logged-in user info
+app.get("/api/me", (req, res) => {
+  if (!req.user) {
+    return res.json({ loggedIn: false });
+  }
+  res.json({
+    loggedIn: true,
+    email: req.user.emails[0].value,
+    name: req.user.displayName
+  });
+});
+
+// ✅ Routes
+// First page is always login.html
 app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "index.html"));
+  res.sendFile(path.join(__dirname, "login.html"));
 });
 
-// ✅ Serve other pages
+// After login → dashboard
+app.get("/dashboard", (req, res) => {
+  if (!req.user) return res.redirect("/login.html");
+  res.send(`
+    <h1>Welcome ${req.user.displayName} 👋</h1>
+    <p>Email: ${req.user.emails[0].value}</p>
+    <a href="/plans.html">View Plans</a> |
+    <a href="/playground.html">Playground</a> |
+    <a href="/logout">Logout</a>
+  `);
+});
+
+// Other static pages
 app.get("/plans.html", (req, res) => {
+  if (!req.user) return res.redirect("/login.html");
   res.sendFile(path.join(__dirname, "plans.html"));
 });
 
 app.get("/playground.html", (req, res) => {
+  if (!req.user) return res.redirect("/login.html");
   res.sendFile(path.join(__dirname, "playground.html"));
 });
 
 app.get("/engineer.html", (req, res) => {
+  if (!req.user) return res.redirect("/login.html");
   res.sendFile(path.join(__dirname, "engineer.html"));
 });
 
-// ✅ API endpoint (AI generation)
+// ✅ OpenAI API endpoint
+const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 app.post("/api/generate-ai", async (req, res) => {
   try {
     const { prompt } = req.body;
-    if (!prompt) return res.status(400).json({ error: "No prompt provided" });
-
     const completion = await client.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [
-        { role: "system", content: "You are a professional coding assistant that generates website code in a clean and reliable way." },
+        { role: "system", content: "You are a professional coding assistant." },
         { role: "user", content: prompt }
       ]
     });
-
     res.json({ code: completion.choices[0].message.content });
   } catch (err) {
-    console.error("AI error:", err);
+    console.error(err);
     res.status(500).json({ error: "AI generation failed" });
   }
 });
 
-// Start server
+// Serve static files (login.html, qr, etc.)
+app.use(express.static(__dirname));
+
 app.listen(PORT, () => console.log(`✅ CodeGoldenAI running at http://localhost:${PORT}`));
