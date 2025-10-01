@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Login • CodeGoldenAI</title>
+  <style>
+    :root {
+      --gold1:#f6c64a; --gold2:#eb8b36;
+      --bg:#f7fafc; --text:#222; --muted:#555;
+      --radius:18px; --shadow:0 20px 60px rgba(0,0,0,.15);
+    }
+    * { box-sizing: border-box; margin:0; padding:0; }
+    body {
+      font-family: "Segoe UI", Roboto, sans-serif;
+      background: linear-gradient(135deg, #fff 0%, #f7fafc 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+    .container {
+      background: #fff;
+      padding: 3rem 2rem;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      max-width: 400px;
+      width: 100%;
+      text-align: center;
+    }
+    h1 {
+      font-size: 1.8rem;
+      margin-bottom: 0.5rem;
+      background: linear-gradient(45deg,var(--gold1),var(--gold2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    p {
+      color: var(--muted);
+      margin-bottom: 2rem;
+    }
+    .google-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0.9rem 1.4rem;
+      border-radius: var(--radius);
+      font-weight: bold;
+      font-size: 1rem;
+      background: #fff;
+      border: 2px solid #ccc;
+      color: #444;
+      text-decoration: none;
+      box-shadow: var(--shadow);
+      cursor: pointer;
+      transition: transform .2s, box-shadow .2s;
+    }
+    .google-btn:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 12px 30px rgba(0,0,0,0.2);
+    }
+    .google-btn img {
+      height: 24px;
+      width: 24px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Welcome to CodeGoldenAI</h1>
+    <p>Log in or sign up to continue</p>
+    <a class="google-btn" href="/auth/google">
+      <img src="https://developers.google.com/identity/images/g-logo.png" alt="Google logo">
+      Continue with Google
+    </a>
+  </div>
+</body>
+</html>
