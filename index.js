@@ -1,4 +1,4 @@
-// index.js — CodeGoldenAI with Google Login + HTTPS fix
+// index.js — CodeGoldenAI with Google OAuth fixed (Render HTTPS)
 
 import express from "express";
 import cors from "cors";
@@ -18,7 +18,10 @@ const PORT = process.env.PORT || 10000;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// ✅ Force HTTPS (fix redirect_uri_mismatch)
+// ✅ Tell Express to trust Render's proxy (so x-forwarded-proto works)
+app.set("trust proxy", 1);
+
+// ✅ Force HTTPS middleware
 app.use((req, res, next) => {
   if (req.headers["x-forwarded-proto"] !== "https") {
     return res.redirect("https://" + req.headers.host + req.url);
@@ -43,11 +46,11 @@ app.use(passport.session());
 passport.serializeUser((user, done) => done(null, user));
 passport.deserializeUser((obj, done) => done(null, obj));
 
-// ✅ Google OAuth strategy
+// ✅ Google OAuth strategy (explicit full https callback)
 passport.use(new GoogleStrategy({
     clientID: process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    callbackURL: "/auth/google/callback", // relative, Express + Render handle domain
+    callbackURL: "https://codegoldenai.onrender.com/auth/google/callback"
   },
   (accessToken, refreshToken, profile, done) => {
     return done(null, profile);
@@ -138,8 +141,8 @@ app.post("/api/generate-ai", async (req, res) => {
   }
 });
 
-// ✅ Serve static files (login.html, qr image, css, etc.)
+// ✅ Serve static files (login.html, plans.html, QR image, CSS, etc.)
 app.use(express.static(__dirname));
 
 // Start server
-app.listen(PORT, () => console.log(`✅ CodeGoldenAI running at http://localhost:${PORT}`));
+app.listen(PORT, () => console.log(`✅ CodeGoldenAI running at https://codegoldenai.onrender.com`));
