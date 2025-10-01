@@ -1,4 +1,4 @@
-// index.js — CodeGoldenAI with Google OAuth fixed (Render HTTPS)
+// index.js — CodeGoldenAI with Google OAuth → Home Profile Page
 
 import express from "express";
 import cors from "cors";
@@ -18,10 +18,10 @@ const PORT = process.env.PORT || 10000;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// ✅ Tell Express to trust Render's proxy (so x-forwarded-proto works)
+// ✅ Trust Render's proxy
 app.set("trust proxy", 1);
 
-// ✅ Force HTTPS middleware
+// ✅ Force HTTPS
 app.use((req, res, next) => {
   if (req.headers["x-forwarded-proto"] !== "https") {
     return res.redirect("https://" + req.headers.host + req.url);
@@ -43,10 +43,14 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 // Passport serialize/deserialize
-passport.serializeUser((user, done) => done(null, user));
+passport.serializeUser((user, done) => {
+  // Add default plan = Free
+  user.plan = "Free";
+  done(null, user);
+});
 passport.deserializeUser((obj, done) => done(null, obj));
 
-// ✅ Google OAuth strategy (explicit full https callback)
+// ✅ Google OAuth strategy
 passport.use(new GoogleStrategy({
     clientID: process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
@@ -65,7 +69,7 @@ app.get("/auth/google",
 app.get("/auth/google/callback",
   passport.authenticate("google", { failureRedirect: "/login.html" }),
   (req, res) => {
-    res.redirect("/dashboard");
+    res.redirect("/home"); // Redirect to new home page
   }
 );
 
@@ -75,34 +79,57 @@ app.get("/logout", (req, res) => {
   });
 });
 
-// ✅ API endpoint to expose logged-in user info
+// ✅ API endpoint for frontend
 app.get("/api/me", (req, res) => {
-  if (!req.user) {
-    return res.json({ loggedIn: false });
-  }
+  if (!req.user) return res.json({ loggedIn: false });
   res.json({
     loggedIn: true,
     email: req.user.emails[0].value,
-    name: req.user.displayName
+    name: req.user.displayName,
+    picture: req.user.photos && req.user.photos.length > 0 ? req.user.photos[0].value : null,
+    plan: req.user.plan || "Free"
   });
 });
 
 // ✅ Routes
-// First page is always login.html
+// First page is login
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "login.html"));
 });
 
-// After login → dashboard
-app.get("/dashboard", (req, res) => {
+// Home page after login
+app.get("/home", (req, res) => {
   if (!req.user) return res.redirect("/login.html");
   res.send(`
-    <h1>Welcome ${req.user.displayName} 👋</h1>
-    <p>Email: ${req.user.emails[0].value}</p>
-    <a href="/plans.html">View Plans</a> |
-    <a href="/playground.html">Playground</a> |
-    <a href="/engineer.html">Hire Engineer</a> |
-    <a href="/logout">Logout</a>
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Home • CodeGoldenAI</title>
+      <style>
+        body { font-family: Arial, sans-serif; background:#f7fafc; text-align:center; padding:2rem; }
+        .card {
+          background:white; max-width:400px; margin:2rem auto; padding:2rem;
+          border-radius:12px; box-shadow:0 12px 30px rgba(0,0,0,0.15);
+        }
+        img { border-radius:50%; width:100px; margin-bottom:1rem; }
+        h1 { margin:0.5rem 0; }
+        p { color:#444; margin:0.3rem 0; }
+        .btn { display:inline-block; margin:0.5rem; padding:0.7rem 1.2rem; border-radius:8px;
+          background:linear-gradient(45deg,#f6c64a,#eb8b36); color:white; font-weight:bold; text-decoration:none; }
+      </style>
+    </head>
+    <body>
+      <div class="card">
+        <img src="${req.user.photos && req.user.photos.length > 0 ? req.user.photos[0].value : "https://via.placeholder.com/100"}" alt="Profile Picture"/>
+        <h1>${req.user.displayName}</h1>
+        <p>Email: ${req.user.emails[0].value}</p>
+        <p><strong>Plan:</strong> ${req.user.plan || "Free"}</p>
+        <a class="btn" href="/plans.html">Upgrade Plan</a>
+        <a class="btn" href="/playground.html">Playground</a>
+        <a class="btn" href="/logout">Logout</a>
+      </div>
+    </body>
+    </html>
   `);
 });
 
@@ -122,7 +149,7 @@ app.get("/engineer.html", (req, res) => {
   res.sendFile(path.join(__dirname, "engineer.html"));
 });
 
-// ✅ OpenAI API endpoint
+// ✅ OpenAI endpoint
 const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 app.post("/api/generate-ai", async (req, res) => {
   try {
@@ -141,8 +168,7 @@ app.post("/api/generate-ai", async (req, res) => {
   }
 });
 
-// ✅ Serve static files (login.html, plans.html, QR image, CSS, etc.)
+// ✅ Static serving
 app.use(express.static(__dirname));
 
-// Start server
 app.listen(PORT, () => console.log(`✅ CodeGoldenAI running at https://codegoldenai.onrender.com`));
