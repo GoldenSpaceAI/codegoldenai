@@ -1,4 +1,4 @@
-// index.js — CodeGoldenAI Google OAuth → index.html homepage
+// index.js — CodeGoldenAI with Google OAuth + AI + Engineer Requests
 
 import express from "express";
 import cors from "cors";
@@ -10,6 +10,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import passport from "passport";
 import { Strategy as GoogleStrategy } from "passport-google-oauth20";
+import nodemailer from "nodemailer";
 
 dotenv.config();
 const app = express();
@@ -68,7 +69,7 @@ app.get("/auth/google",
 app.get("/auth/google/callback",
   passport.authenticate("google", { failureRedirect: "/login.html" }),
   (req, res) => {
-    // ⬇️ After successful login, redirect to index.html
+    // Redirect to homepage
     res.redirect("/index.html");
   }
 );
@@ -89,19 +90,44 @@ app.get("/api/me", (req, res) => {
   });
 });
 
+// ✅ Engineer Request API (sends email to you)
+app.post("/api/send-engineer-request", async (req, res) => {
+  try {
+    const { email, name, type, description } = req.body;
+
+    // Configure mail transporter
+    let transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: process.env.EMAIL_USER, // your Gmail
+        pass: process.env.EMAIL_PASS  // app password
+      }
+    });
+
+    await transporter.sendMail({
+      from: `"CodeGoldenAI" <${process.env.EMAIL_USER}>`,
+      to: "goldenspaceais@gmail.com",
+      subject: `New Engineer Request (${type})`,
+      text: `New request from ${name} (${email})\n\nType: ${type}\n\nDescription:\n${description}`
+    });
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error("Email error:", err);
+    res.status(500).json({ error: "Failed to send email" });
+  }
+});
+
 // ✅ Routes
-// First page is login
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "login.html"));
 });
 
-// Home page (after login it goes here)
 app.get("/index.html", (req, res) => {
   if (!req.user) return res.redirect("/login.html");
   res.sendFile(path.join(__dirname, "index.html"));
 });
 
-// Other static pages (protected)
 app.get("/plans.html", (req, res) => {
   if (!req.user) return res.redirect("/login.html");
   res.sendFile(path.join(__dirname, "plans.html"));
