@@ -64,16 +64,14 @@
       padding: 0.8rem 1.5rem;
       border-radius: 10px;
       font-weight: bold;
-      cursor: pointer;
-      border: none;
       font-size: 1rem;
+      cursor: pointer;
+      text-decoration: none;
+      color: white;
+      background: linear-gradient(45deg, #f6c64a, #eb8b36);
       transition: 0.3s;
     }
-    .btn-primary {
-      background: linear-gradient(45deg, #f6c64a, #eb8b36);
-      color: white;
-    }
-    .btn-primary:hover { opacity: 0.9; }
+    .btn:hover { opacity: 0.9; }
     .wallet {
       margin-top: 1rem;
       font-size: 0.9rem;
@@ -83,22 +81,6 @@
     .qr {
       margin-top: 1rem;
       max-width: 150px;
-    }
-    .upload-box {
-      margin-top: 1rem;
-      text-align: center;
-    }
-    input[type="file"] {
-      margin-top: 0.5rem;
-    }
-    .success {
-      margin-top: 1rem;
-      padding: 1rem;
-      background: #e6ffed;
-      color: #1a7f37;
-      border-radius: 8px;
-      font-weight: bold;
-      display: none;
     }
   </style>
 </head>
@@ -128,12 +110,7 @@
       <div class="wallet">trustwallet: <strong>TCN6eVtHFNtPAJNfebgGGm8c2h71NWYY9P</strong></div>
       <img src="QR.jpeg" alt="QR Code" class="qr">
 
-      <div class="upload-box">
-        <label><strong>Upload Payment Receipt:</strong></label><br>
-        <input type="file" id="plusFile" accept="image/*"><br>
-        <button class="btn btn-primary" onclick="submitProof('Plus')">📩 Send Proof</button>
-        <div class="success" id="plusSuccess">✅ Proof sent. Engineer Faris will confirm soon.</div>
-      </div>
+      <a class="btn" href="mailto:goldenspaceais@gmail.com?subject=Plan%20Upgrade%20Proof%20(Plus)&body=Hello,%20I%20have%20paid%205%20USTD.%20Please%20find%20my%20receipt%20attached.">📩 Send Proof via Email</a>
     </div>
 
     <!-- Pro Plan -->
@@ -149,46 +126,8 @@
       <div class="wallet">trustwallet: <strong>TCN6eVtHFNtPAJNfebgGGm8c2h71NWYY9P</strong></div>
       <img src="QR.jpeg" alt="QR Code" class="qr">
 
-      <div class="upload-box">
-        <label><strong>Upload Payment Receipt:</strong></label><br>
-        <input type="file" id="proFile" accept="image/*"><br>
-        <button class="btn btn-primary" onclick="submitProof('Pro')">📩 Send Proof</button>
-        <div class="success" id="proSuccess">✅ Proof sent. Engineer Faris will confirm soon.</div>
-      </div>
+      <a class="btn" href="mailto:goldenspaceais@gmail.com?subject=Plan%20Upgrade%20Proof%20(Pro)&body=Hello,%20I%20have%20paid%2020%20USTD.%20Please%20find%20my%20receipt%20attached.">📩 Send Proof via Email</a>
     </div>
   </main>
-
-  <script>
-    async function submitProof(plan) {
-      const fileInput = document.getElementById(plan.toLowerCase() + "File");
-      const file = fileInput.files[0];
-      if (!file) return alert("Please upload your receipt image first!");
-
-      // Get logged-in user
-      const resUser = await fetch("/api/me");
-      const user = await resUser.json();
-      if (!user.loggedIn) {
-        alert("Please log in first.");
-        return;
-      }
-
-      const formData = new FormData();
-      formData.append("plan", plan);
-      formData.append("receipt", file);
-      formData.append("email", user.email);
-
-      const res = await fetch("/api/send-plan-proof", {
-        method: "POST",
-        body: formData
-      });
-
-      if (res.ok) {
-        document.getElementById(plan.toLowerCase() + "Success").style.display = "block";
-        fileInput.value = "";
-      } else {
-        alert("Failed to send proof. Try again.");
-      }
-    }
-  </script>
 </body>
 </html>
