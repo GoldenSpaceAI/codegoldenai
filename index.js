@@ -1,4 +1,4 @@
-// index.js — CodeGoldenAI (Full Version)
+// index.js — CodeGoldenAI
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
@@ -6,49 +6,35 @@ import bodyParser from "body-parser";
 import session from "express-session";
 import passport from "passport";
 import { Strategy as GoogleStrategy } from "passport-google-oauth20";
-import path from "path";
-import { fileURLToPath } from "url";
-import { OpenAI } from "openai";
 
 dotenv.config();
 const app = express();
-const PORT = process.env.PORT || 10000;
-
-// __dirname setup for ES modules
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(cors());
 app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(express.static("public")); // serve html/css/js/images
+
 app.use(
   session({
-    secret: process.env.SESSION_SECRET || "render_secret",
+    secret: process.env.SESSION_SECRET || "supersecretkey",
     resave: false,
     saveUninitialized: false,
   })
 );
+
 app.use(passport.initialize());
 app.use(passport.session());
 
-// Static files (HTML, images, QR, etc.)
-app.use(express.static(__dirname));
-app.use(express.static(path.join(__dirname, "public")));
-
-// OpenAI client
-const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
-
-// ---------------- GOOGLE LOGIN ---------------- //
+// Passport setup
 passport.use(
   new GoogleStrategy(
     {
       clientID: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      callbackURL:
-        process.env.GOOGLE_CALLBACK_URL ||
-        "https://codegoldenai.onrender.com/auth/google/callback",
+      callbackURL: "https://codegoldenai.onrender.com/auth/google/callback",
     },
     (accessToken, refreshToken, profile, done) => {
       return done(null, profile);
@@ -56,24 +42,21 @@ passport.use(
   )
 );
 
-passport.serializeUser((user, done) => {
-  done(null, user);
-});
-passport.deserializeUser((obj, done) => {
-  done(null, obj);
-});
+passport.serializeUser((user, done) => done(null, user));
+passport.deserializeUser((obj, done) => done(null, obj));
 
-// Google Auth routes
-app.get(
-  "/auth/google",
-  passport.authenticate("google", { scope: ["profile", "email"] })
-);
+// Memory storage
+let upgradeRequests = []; // { email, plan }
+let userPlans = {}; // { email: { plan, expiry } }
+
+// Auth routes
+app.get("/auth/google", passport.authenticate("google", { scope: ["profile", "email"] }));
 
 app.get(
   "/auth/google/callback",
   passport.authenticate("google", { failureRedirect: "/login.html" }),
   (req, res) => {
-    res.redirect("/index.html"); // ✅ after login go home
+    res.redirect("/index.html");
   }
 );
 
@@ -83,80 +66,87 @@ app.get("/logout", (req, res) => {
   });
 });
 
-// ---------------- USER INFO ---------------- //
+// API: Current user
 app.get("/api/me", (req, res) => {
-  if (!req.user) {
-    return res.json({ loggedIn: false });
+  if (!req.user) return res.json({ loggedIn: false });
+
+  const email = req.user.emails[0].value;
+  const now = Date.now();
+
+  let planData = userPlans[email];
+  if (!planData || (planData.expiry && now > planData.expiry)) {
+    userPlans[email] = { plan: "Free", expiry: null };
+    planData = userPlans[email];
   }
+
   res.json({
     loggedIn: true,
-    email: req.user.emails?.[0]?.value,
+    email,
     name: req.user.displayName,
-    picture: req.user.photos?.[0]?.value,
-    plan: "Free", // placeholder until you add upgrades
+    picture: req.user.photos[0].value,
+    plan: planData.plan,
+    expiry: planData.expiry,
   });
 });
 
-// ---------------- OPENAI ROUTES ---------------- //
+// API: Submit upgrade request
+app.post("/api/submit-upgrade", (req, res) => {
+  if (!req.user) return res.status(401).send("Not logged in");
+  const { plan } = req.body;
+  const email = req.user.emails[0].value;
 
-// Playground → GPT-4o-mini
-app.post("/api/generate-playground", async (req, res) => {
-  try {
-    const { prompt } = req.body;
-    const completion = await client.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [
-        { role: "system", content: "You are a helpful coding assistant." },
-        { role: "user", content: prompt },
-      ],
-    });
-    res.json({ reply: completion.choices[0].message.content });
-  } catch (err) {
-    console.error("Playground AI error:", err);
-    res.status(500).json({ error: "Playground AI failed" });
-  }
+  upgradeRequests.push({ email, plan });
+  res.json({ success: true, message: "Upgrade request submitted. Waiting for admin approval." });
 });
 
-// AdvancedAI → GPT-4
-app.post("/api/generate-advanced", async (req, res) => {
-  try {
-    const { prompt } = req.body;
-    const completion = await client.chat.completions.create({
-      model: "gpt-4",
-      messages: [
-        {
-          role: "system",
-          content:
-            "You are an advanced assistant for developers. If the user requests code, return clean code blocks.",
-        },
-        { role: "user", content: prompt },
-      ],
-    });
-
-    const text = completion.choices[0].message.content;
-
-    // Extract code block if present
-    const codeMatch = text.match(/```[\s\S]*?```/);
-    const code = codeMatch
-      ? codeMatch[0].replace(/```[\w]*/g, "").trim()
-      : null;
-
-    res.json({
-      text: text.replace(/```[\s\S]*?```/, "").trim(),
-      code,
-    });
-  } catch (err) {
-    console.error("AdvancedAI error:", err);
-    res.status(500).json({ error: "AdvancedAI failed" });
-  }
+// Admin API: View requests
+app.get("/api/admin/requests", (req, res) => {
+  res.json(upgradeRequests);
 });
 
-// ---------------- FALLBACK ---------------- //
-app.get("*", (req, res) => {
-  res.sendFile(path.join(__dirname, "index.html"));
+// Admin API: Approve plan
+app.post("/api/admin/approve", (req, res) => {
+  const { email, plan } = req.body;
+  const duration = 30 * 24 * 60 * 60 * 1000; // 30 days
+
+  userPlans[email] = { plan, expiry: Date.now() + duration };
+
+  upgradeRequests = upgradeRequests.filter((r) => r.email !== email);
+  res.json({ success: true, message: `${plan} approved for ${email}` });
 });
+
+// Admin API: Decline plan
+app.post("/api/admin/decline", (req, res) => {
+  const { email } = req.body;
+  upgradeRequests = upgradeRequests.filter((r) => r.email !== email);
+  res.json({ success: true, message: `Request declined for ${email}` });
+});
+
+// Middleware: Protect pages by plan
+function requirePlan(minPlan) {
+  return (req, res, next) => {
+    if (!req.user) return res.redirect("/login.html");
+
+    const email = req.user.emails[0].value;
+    const planData = userPlans[email] || { plan: "Free" };
+
+    const allowed = {
+      Free: 1,
+      Plus: 2,
+      Pro: 3,
+    };
+
+    if (allowed[planData.plan] >= allowed[minPlan]) {
+      return next();
+    } else {
+      return res.redirect("/plans.html");
+    }
+  };
+}
+
+// Protect routes
+app.use("/advancedai.html", requirePlan("Plus"));
+app.use("/engineer.html", requirePlan("Pro"));
 
 // Start server
-app.listen(PORT, () =>
-  console.log(`✅ Server running at http://localhost:${PORT}`)
-);
+app.listen(PORT, () => console.log(`🚀 Server running on http://localhost:${PORT}`));
