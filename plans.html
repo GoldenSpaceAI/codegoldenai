@@ -1,40 +1,42 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Plans • CodeGoldenAI</title>
   <style>
     :root {
-      --gold1:#f6c64a; --gold2:#eb8b36;
-      --text:#222; --muted:#555; --bg:#f7fafc;
-      --card:#fff; --radius:18px; --shadow:0 20px 60px rgba(0,0,0,.12);
-      --accent:#0ea5e9;
+      --bg: #070b14;
+      --card: #10182c;
+      --text: #eaf1ff;
+      --muted: #9da9c6;
+      --gold1: #f6c64a;
+      --gold2: #eb8b36;
+      --radius: 14px;
+      --shadow: 0 18px 50px rgba(0,0,0,.5);
     }
-    * { box-sizing:border-box; margin:0; padding:0; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      font-family: "Segoe UI", Roboto, sans-serif;
+      font-family: "Segoe UI", sans-serif;
       background: var(--bg);
       color: var(--text);
       line-height: 1.6;
+      padding: 2rem;
     }
-    header {
+    h1 {
       text-align: center;
-      padding: 2rem 1rem;
-    }
-    header h1 {
       font-size: 2.2rem;
-      background: linear-gradient(45deg,var(--gold1),var(--gold2));
+      margin-bottom: 2rem;
+      background: linear-gradient(45deg, var(--gold1), var(--gold2));
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
     }
     .plans {
-      max-width: 1100px;
-      margin: 2rem auto;
       display: grid;
-      grid-template-columns: repeat(auto-fit,minmax(280px,1fr));
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
       gap: 2rem;
-      padding: 0 1rem;
+      max-width: 1200px;
+      margin: 0 auto;
     }
     .plan {
       background: var(--card);
@@ -42,178 +44,124 @@
       border-radius: var(--radius);
       box-shadow: var(--shadow);
       text-align: center;
-      transition: transform .3s;
     }
-    .plan:hover { transform: translateY(-6px); }
     .plan h2 {
+      margin-bottom: 1rem;
       font-size: 1.5rem;
-      margin-bottom: .6rem;
-      background: linear-gradient(45deg,var(--gold1),var(--gold2));
+      background: linear-gradient(45deg, var(--gold1), var(--gold2));
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
     }
     .price {
-      font-size: 2rem;
+      font-size: 1.8rem;
       margin: 1rem 0;
-      font-weight: bold;
     }
-    .plan ul {
-      list-style: none;
+    .features {
+      text-align: left;
       margin: 1rem 0;
-      padding: 0;
-      color: var(--muted);
       font-size: 0.95rem;
+      color: var(--muted);
     }
-    .plan ul li { margin: .5rem 0; }
     .btn {
       display: inline-block;
-      padding: .9rem 1.6rem;
+      margin-top: 1rem;
+      padding: 0.8rem 1.2rem;
       border-radius: var(--radius);
+      background: linear-gradient(45deg, var(--gold1), var(--gold2));
+      color: black;
       font-weight: bold;
       text-decoration: none;
-      background: linear-gradient(45deg,var(--gold1),var(--gold2));
-      color: #fff;
       cursor: pointer;
     }
-    /* Modal */
-    .modal {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.6);
-      backdrop-filter: blur(3px);
-      justify-content: center;
-      align-items: center;
-      z-index: 1000;
-    }
-    .modal-content {
-      background: #fff;
-      padding: 2rem;
-      border-radius: var(--radius);
-      max-width: 420px;
-      width: 100%;
+    .qr-box {
+      margin-top: 1.2rem;
       text-align: center;
+    }
+    .qr-box img {
+      max-width: 200px;
+      border-radius: 12px;
       box-shadow: var(--shadow);
-      position: relative;
-      animation: pop .3s ease;
     }
-    @keyframes pop { from{transform:scale(.9);opacity:0} to{transform:scale(1);opacity:1} }
-    .modal img {
-      max-width: 220px;
-      margin: 1rem auto;
-      display: block;
+    form {
+      margin-top: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
     }
-    .wallet {
-      font-family: monospace;
-      background: #f3f4f6;
-      padding: .7rem;
+    input, button {
+      padding: 0.7rem;
       border-radius: 8px;
-      margin: 1rem 0;
-      font-size: .9rem;
-      word-break: break-all;
-    }
-    .copy-btn {
-      margin-top: .5rem;
-      padding: .4rem .8rem;
-      background: var(--accent);
-      color: #fff;
       border: none;
-      border-radius: 6px;
-      cursor: pointer;
+      font-size: 0.95rem;
     }
-    .copy-btn:hover { background: #009dff; }
-    .close {
-      position: absolute;
-      top: 15px;
-      right: 20px;
-      font-size: 1.4rem;
+    input[type="email"], input[type="file"] {
+      background: #0f1525;
+      color: var(--text);
+    }
+    button {
+      background: linear-gradient(45deg, var(--gold1), var(--gold2));
+      font-weight: bold;
       cursor: pointer;
-      color: #666;
     }
   </style>
 </head>
 <body>
-  <header>
-    <h1>Choose Your Plan</h1>
-    <p>Start free or unlock full power with USDT</p>
-  </header>
+  <h1>Choose Your Plan</h1>
+  <div class="plans">
 
-  <section class="plans">
-    <!-- Free -->
+    <!-- Free Plan -->
     <div class="plan">
-      <h2>Free</h2>
-      <div class="price">$0</div>
-      <ul>
-        <li>Access to AI Playground</li>
-        <li>Simple Website Generator</li>
-      </ul>
-      <a href="/playground.html" class="btn">Start Free</a>
+      <h2>🚀 Free Plan</h2>
+      <p class="price">$0</p>
+      <div class="features">
+        <p>✔ Access to Playground</p>
+        <p>✔ Simple Website Generator</p>
+        <p>✘ No AdvancedAI</p>
+        <p>✘ No Engineer Support</p>
+      </div>
+      <a class="btn" href="/playground.html">Start Free</a>
     </div>
 
-    <!-- Plus -->
+    <!-- Plus Plan -->
     <div class="plan">
-      <h2>Plus</h2>
-      <div class="price">5 USDT</div>
-      <ul>
-        <li>Simple Website Generator</li>
-        <li>Advanced Website Generator</li>
-      </ul>
-      <button class="btn" onclick="openModal('Plus',5)">Buy Now</button>
+      <h2>🌟 Plus Plan</h2>
+      <p class="price">5 USDT</p>
+      <div class="features">
+        <p>✔ Simple Website Generator</p>
+        <p>✔ Advanced Website Generator (Gemini Pro)</p>
+        <p>✘ No Engineer Support</p>
+      </div>
+      <div class="qr-box">
+        <p>Send 5 USDT to this address:</p>
+        <img src="/QR.jpeg" alt="USDT QR Code">
+        <form action="mailto:goldenspaceais@gmail.com" method="POST" enctype="multipart/form-data">
+          <input type="email" name="email" placeholder="Your Email" required>
+          <input type="file" name="receipt" accept="image/*" required>
+          <button type="submit">I Paid, Send Proof</button>
+        </form>
+      </div>
     </div>
 
-    <!-- Pro -->
+    <!-- Pro Plan -->
     <div class="plan">
-      <h2>Pro</h2>
-      <div class="price">20 USDT</div>
-      <ul>
-        <li>Unlimited Features</li>
-        <li>Priority Access</li>
-        <li>All Website Generators</li>
-      </ul>
-      <button class="btn" onclick="openModal('Pro',20)">Buy Now</button>
+      <h2>👑 Pro Plan</h2>
+      <p class="price">20 USDT</p>
+      <div class="features">
+        <p>✔ Unlimited Playground Access</p>
+        <p>✔ Simple & Advanced Website Generators</p>
+        <p>✔ Priority Engineer Support</p>
+      </div>
+      <div class="qr-box">
+        <p>Send 20 USDT to this address:</p>
+        <img src="/QR.jpeg" alt="USDT QR Code">
+        <form action="mailto:goldenspaceais@gmail.com" method="POST" enctype="multipart/form-data">
+          <input type="email" name="email" placeholder="Your Email" required>
+          <input type="file" name="receipt" accept="image/*" required>
+          <button type="submit">I Paid, Send Proof</button>
+        </form>
+      </div>
     </div>
-  </section>
 
-  <!-- Modal -->
-  <div class="modal" id="paymentModal">
-    <div class="modal-content">
-      <span class="close" onclick="closeModal()">×</span>
-      <h2 id="planTitle">Upgrade</h2>
-      <p>Send the exact amount to this wallet (TRC20 USDT):</p>
-      <img src="/USTD QR.jpeg" alt="USDT QR Code"/>
-      <div class="wallet" id="walletAddr">TCN6eVtHFNtPAJNfebgGGm8c2h71NWYY9P</div>
-      <button class="copy-btn" onclick="copyWallet()">Copy Address</button>
-      <p style="margin-top:1rem;font-size:.9rem;">After payment, click below and attach an image of your receipt:</p>
-      <a id="proofLink" class="btn" href="#">I Paid – Send Proof</a>
-    </div>
   </div>
-
-  <script>
-    let currentPlan = "";
-    let currentPrice = "";
-
-    function openModal(plan, price){
-      currentPlan = plan;
-      currentPrice = price;
-      document.getElementById("planTitle").textContent = plan + " Plan";
-      const mailto = 
-        "mailto:goldenspaceais@gmail.com"
-        + "?subject=Payment Proof for " + plan + " Plan"
-        + "&body=Hello,%0D%0A%0D%0AI have paid " + price + " USDT (TRC20).%0D%0APlan: " + plan 
-        + "%0D%0AEmail: [your email here]%0D%0A%0D%0APlease find attached an image of my receipt.%0D%0A";
-      document.getElementById("proofLink").href = mailto;
-      document.getElementById("paymentModal").style.display = "flex";
-    }
-
-    function closeModal(){
-      document.getElementById("paymentModal").style.display = "none";
-    }
-
-    function copyWallet(){
-      const addr = document.getElementById("walletAddr").innerText;
-      navigator.clipboard.writeText(addr);
-      alert("Wallet address copied!");
-    }
-  </script>
 </body>
 </html>
