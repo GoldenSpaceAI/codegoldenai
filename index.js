@@ -1,4 +1,4 @@
-// index.js — CodeGoldenAI (full with admin + plans)
+// index.js — CodeGoldenAI (fixed OAuth issue + plans + admin + AI)
 import express from "express";
 import session from "express-session";
 import passport from "passport";
@@ -32,21 +32,23 @@ app.use(express.static(__dirname));
 // OpenAI client
 const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
+// ===== In-memory storage =====
+let usersPlans = {};       // { email: { plan: "Free"|"Plus"|"Pro", expires: Date } }
+let upgradeRequests = [];  // { email, plan }
+
 // ===== PASSPORT GOOGLE LOGIN =====
+const callbackURL = process.env.GOOGLE_CALLBACK_URL || "https://codegoldenai.onrender.com/auth/google/callback";
+
 passport.use(new GoogleStrategy({
   clientID: process.env.GOOGLE_CLIENT_ID,
   clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-  callbackURL: process.env.GOOGLE_CALLBACK_URL
+  callbackURL
 }, (accessToken, refreshToken, profile, done) => {
   return done(null, profile);
 }));
 
 passport.serializeUser((user, done) => done(null, user));
 passport.deserializeUser((obj, done) => done(null, obj));
-
-// ===== In-memory storage =====
-let usersPlans = {};       // { email: { plan: "Free"|"Plus"|"Pro", expires: Date } }
-let upgradeRequests = [];  // { email, plan }
 
 // ===== Middleware =====
 function ensureAuth(req, res, next) {
@@ -61,7 +63,10 @@ function requireAdmin(req, res, next) {
 }
 
 // ===== AUTH ROUTES =====
-app.get("/auth/google", passport.authenticate("google", { scope: ["profile", "email"] }));
+app.get("/auth/google", passport.authenticate("google", {
+  scope: ["profile", "email"],
+  prompt: "select_account"
+}));
 
 app.get("/auth/google/callback",
   passport.authenticate("google", { failureRedirect: "/login.html" }),
@@ -83,13 +88,19 @@ app.get("/api/me", (req, res) => {
   if (!req.isAuthenticated()) return res.json({ loggedIn: false });
   const email = req.user.emails[0].value;
   const planInfo = usersPlans[email] || { plan: "Free", expires: null };
+
+  // auto-expire plans
+  if (planInfo.expires && new Date(planInfo.expires) < new Date()) {
+    usersPlans[email] = { plan: "Free", expires: null };
+  }
+
   res.json({
     loggedIn: true,
     email,
     name: req.user.displayName,
     picture: req.user.photos?.[0]?.value,
-    plan: planInfo.plan,
-    expires: planInfo.expires
+    plan: usersPlans[email].plan,
+    expires: usersPlans[email].expires
   });
 });
 
@@ -97,7 +108,6 @@ app.get("/api/me", (req, res) => {
 app.post("/api/send-plan-proof", ensureAuth, (req, res) => {
   const email = req.user.emails[0].value;
   const { plan } = req.body;
-
   upgradeRequests.push({ email, plan });
   res.json({ success: true });
 });
@@ -111,7 +121,6 @@ app.post("/api/admin/approve", requireAdmin, (req, res) => {
   const { email, plan } = req.body;
   const expiry = new Date();
   expiry.setDate(expiry.getDate() + 30); // 30 days
-
   usersPlans[email] = { plan, expires: expiry };
   upgradeRequests = upgradeRequests.filter(r => r.email !== email);
   res.json({ success: true });
