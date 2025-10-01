@@ -1,34 +1,25 @@
-// index.js — CodeGoldenAI with Google OAuth + AI + Engineer Requests
-
+// index.js — CodeGoldenAI
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import bodyParser from "body-parser";
 import session from "express-session";
+import passport from "passport";
+import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 import { OpenAI } from "openai";
 import path from "path";
 import { fileURLToPath } from "url";
-import passport from "passport";
-import { Strategy as GoogleStrategy } from "passport-google-oauth20";
-import nodemailer from "nodemailer";
 
 dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 10000;
 
+// Required for __dirname in ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// ✅ Trust Render proxy
-app.set("trust proxy", 1);
-
-// ✅ Force HTTPS
-app.use((req, res, next) => {
-  if (req.headers["x-forwarded-proto"] !== "https") {
-    return res.redirect("https://" + req.headers.host + req.url);
-  }
-  next();
-});
+// ✅ Serve static files (HTML, CSS, JS, Images like QR.jpeg)
+app.use(express.static(__dirname));
 
 // Middleware
 app.use(cors());
@@ -37,133 +28,108 @@ app.use(
   session({
     secret: process.env.SESSION_SECRET || "render_secret",
     resave: false,
-    saveUninitialized: false,
+    saveUninitialized: true,
   })
 );
 app.use(passport.initialize());
 app.use(passport.session());
 
-// Passport serialize/deserialize
+// ✅ OpenAI client
+const client = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
+
+// ✅ Passport Google OAuth2 setup
+passport.use(
+  new GoogleStrategy(
+    {
+      clientID: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      callbackURL:
+        process.env.GOOGLE_CALLBACK_URL ||
+        "https://codegoldenai.onrender.com/auth/google/callback",
+    },
+    (accessToken, refreshToken, profile, done) => {
+      return done(null, profile);
+    }
+  )
+);
+
 passport.serializeUser((user, done) => {
-  user.plan = "Free"; // default plan
   done(null, user);
 });
-passport.deserializeUser((obj, done) => done(null, obj));
+passport.deserializeUser((obj, done) => {
+  done(null, obj);
+});
 
-// ✅ Google OAuth
-passport.use(new GoogleStrategy({
-    clientID: process.env.GOOGLE_CLIENT_ID,
-    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    callbackURL: "https://codegoldenai.onrender.com/auth/google/callback"
-  },
-  (accessToken, refreshToken, profile, done) => {
-    return done(null, profile);
-  }
-));
-
-// ✅ Google login
+// ✅ Auth routes
 app.get("/auth/google",
   passport.authenticate("google", { scope: ["profile", "email"] })
 );
 
-app.get("/auth/google/callback",
+app.get(
+  "/auth/google/callback",
   passport.authenticate("google", { failureRedirect: "/login.html" }),
   (req, res) => {
-    // Redirect to homepage
-    res.redirect("/index.html");
+    res.redirect("/index.html"); // After login → go to homepage
   }
 );
 
 app.get("/logout", (req, res) => {
-  req.logout(() => res.redirect("/login.html"));
-});
-
-// ✅ API endpoint for user info
-app.get("/api/me", (req, res) => {
-  if (!req.user) return res.json({ loggedIn: false });
-  res.json({
-    loggedIn: true,
-    email: req.user.emails[0].value,
-    name: req.user.displayName,
-    picture: req.user.photos?.[0]?.value || null,
-    plan: req.user.plan || "Free"
+  req.logout(() => {
+    res.redirect("/login.html");
   });
 });
 
-// ✅ Engineer Request API (sends email to you)
-app.post("/api/send-engineer-request", async (req, res) => {
-  try {
-    const { email, name, type, description } = req.body;
-
-    // Configure mail transporter
-    let transporter = nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        user: process.env.EMAIL_USER, // your Gmail
-        pass: process.env.EMAIL_PASS  // app password
-      }
+// ✅ API route to get logged-in user info
+app.get("/api/me", (req, res) => {
+  if (req.isAuthenticated()) {
+    res.json({
+      loggedIn: true,
+      email: req.user.emails[0].value,
+      name: req.user.displayName,
+      picture: req.user.photos[0].value,
+      plan: "Free", // placeholder — later you can upgrade plans
     });
-
-    await transporter.sendMail({
-      from: `"CodeGoldenAI" <${process.env.EMAIL_USER}>`,
-      to: "goldenspaceais@gmail.com",
-      subject: `New Engineer Request (${type})`,
-      text: `New request from ${name} (${email})\n\nType: ${type}\n\nDescription:\n${description}`
-    });
-
-    res.json({ success: true });
-  } catch (err) {
-    console.error("Email error:", err);
-    res.status(500).json({ error: "Failed to send email" });
+  } else {
+    res.json({ loggedIn: false });
   }
 });
 
-// ✅ Routes
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "login.html"));
-});
-
-app.get("/index.html", (req, res) => {
-  if (!req.user) return res.redirect("/login.html");
-  res.sendFile(path.join(__dirname, "index.html"));
-});
-
-app.get("/plans.html", (req, res) => {
-  if (!req.user) return res.redirect("/login.html");
-  res.sendFile(path.join(__dirname, "plans.html"));
-});
-
-app.get("/playground.html", (req, res) => {
-  if (!req.user) return res.redirect("/login.html");
-  res.sendFile(path.join(__dirname, "playground.html"));
-});
-
-app.get("/engineer.html", (req, res) => {
-  if (!req.user) return res.redirect("/login.html");
-  res.sendFile(path.join(__dirname, "engineer.html"));
-});
-
-// ✅ OpenAI API
-const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+// ✅ OpenAI API endpoint for Playground
 app.post("/api/generate-ai", async (req, res) => {
   try {
     const { prompt } = req.body;
+
+    if (!prompt) {
+      return res.status(400).json({ error: "No prompt provided" });
+    }
+
     const completion = await client.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [
-        { role: "system", content: "You are a professional coding assistant." },
+        { role: "system", content: "You are a professional coding assistant that generates full, clean website code when needed." },
         { role: "user", content: prompt }
-      ]
+      ],
     });
+
     res.json({ code: completion.choices[0].message.content });
   } catch (err) {
-    console.error(err);
+    console.error("AI error:", err);
     res.status(500).json({ error: "AI generation failed" });
   }
 });
 
-// ✅ Serve static files
-app.use(express.static(__dirname));
+// ✅ Default route → always show login if not logged in
+app.get("/", (req, res) => {
+  if (req.isAuthenticated()) {
+    res.sendFile(path.join(__dirname, "index.html"));
+  } else {
+    res.sendFile(path.join(__dirname, "login.html"));
+  }
+});
 
 // Start server
-app.listen(PORT, () => console.log(`✅ CodeGoldenAI running at https://codegoldenai.onrender.com`));
+app.listen(PORT, () =>
+  console.log(`✅ Server running at http://localhost:${PORT}`)
+);
