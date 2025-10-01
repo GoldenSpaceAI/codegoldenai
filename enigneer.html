@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hire Engineer • CodeGoldenAI</title>
+  <style>
+    body {
+      font-family: "Segoe UI", sans-serif;
+      background: #f7fafc;
+      margin: 0;
+      padding: 0;
+      color: #222;
+    }
+    header {
+      background: linear-gradient(45deg, #f6c64a, #eb8b36);
+      padding: 1rem;
+      text-align: center;
+      font-weight: bold;
+      font-size: 1.4rem;
+      color: white;
+    }
+    main {
+      max-width: 700px;
+      margin: 2rem auto;
+      padding: 2rem;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+    h2 {
+      margin-bottom: 1rem;
+      background: linear-gradient(45deg,#f6c64a,#eb8b36);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    label { display: block; margin-top: 1rem; font-weight: 500; }
+    textarea, select {
+      width: 100%;
+      margin-top: 0.4rem;
+      padding: 0.8rem;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      font-size: 1rem;
+    }
+    button {
+      margin-top: 1.5rem;
+      padding: 0.9rem 1.5rem;
+      border: none;
+      border-radius: 10px;
+      background: linear-gradient(45deg,#f6c64a,#eb8b36);
+      color: white;
+      font-weight: bold;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+    button:hover { opacity: 0.9; }
+    .success {
+      margin-top: 1rem;
+      padding: 1rem;
+      border-radius: 8px;
+      background: #e6ffed;
+      color: #1a7f37;
+      font-weight: bold;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <header>👨‍💻 Hire Engineer</header>
+  <main>
+    <h2>Tell us about your project</h2>
+    <form id="engineerForm">
+      <label for="desc">Project Description</label>
+      <textarea id="desc" rows="6" placeholder="Describe your project..." required></textarea>
+
+      <label for="type">Project Type</label>
+      <select id="type" required>
+        <option value="AI">AI Project</option>
+        <option value="Education">Education Website</option>
+        <option value="Simple Website">Simple Website</option>
+      </select>
+
+      <button type="submit">📩 Contact Engineer</button>
+    </form>
+    <div class="success" id="successMsg">
+      ✅ Engineer Faris will contact you via your email.
+    </div>
+  </main>
+
+  <script>
+    document.getElementById("engineerForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      // Fetch logged-in user info
+      const userRes = await fetch("/api/me");
+      const user = await userRes.json();
+      if (!user.loggedIn) {
+        alert("Please log in first.");
+        return;
+      }
+
+      const desc = document.getElementById("desc").value;
+      const type = document.getElementById("type").value;
+
+      try {
+        // Send email request to backend
+        const res = await fetch("/api/send-engineer-request", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: user.email,
+            name: user.name,
+            type,
+            description: desc
+          })
+        });
+
+        if (res.ok) {
+          document.getElementById("successMsg").style.display = "block";
+          document.getElementById("engineerForm").reset();
+        } else {
+          alert("Failed to send request. Try again.");
+        }
+      } catch (err) {
+        console.error("Error:", err);
+        alert("Error sending request.");
+      }
+    });
+  </script>
+</body>
+</html>
