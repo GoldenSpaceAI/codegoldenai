@@ -1,4 +1,4 @@
-// index.js — CodeGoldenAI (single file, no extra folders)
+// index.js — CodeGoldenAI (single file, no /public folder)
 
 import express from "express";
 import cors from "cors";
@@ -6,16 +6,10 @@ import dotenv from "dotenv";
 import bodyParser from "body-parser";
 import session from "express-session";
 import { OpenAI } from "openai";
-import path from "path";
-import { fileURLToPath } from "url";
 
 dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 10000;
-
-// Required for __dirname in ES modules
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 // Middleware
 app.use(cors());
@@ -33,7 +27,11 @@ const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-// ✅ Serve index.html directly
+//
+// ROUTES
+//
+
+// ✅ Home Page (index)
 app.get("/", (req, res) => {
   res.send(`<!DOCTYPE html>
 <html lang="en">
@@ -42,12 +40,13 @@ app.get("/", (req, res) => {
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>CodeGoldenAI • Build Smarter Websites</title>
   <style>
-    body { margin:0; font-family:Arial, sans-serif; background:#0a0f1c; color:#eaf1ff; text-align:center; }
-    header { padding:1rem; font-size:1.6rem; font-weight:bold;
+    body { margin:0; font-family:Arial, sans-serif; background:#05060a; color:#eaf1ff; text-align:center; }
+    header { padding:1rem; font-size:1.8rem; font-weight:bold;
       background: linear-gradient(45deg, #f6c64a, #eb8b36);
       -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
     .hero { padding:3rem 1rem; }
-    .hero h2 { font-size:2.2rem; background:linear-gradient(45deg,#f6c64a,#eb8b36);
+    .hero h2 { font-size:2.2rem; margin-bottom:1rem;
+      background:linear-gradient(45deg,#f6c64a,#eb8b36);
       -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
     .btn { display:inline-block; margin:1rem; padding:1rem 1.5rem;
       border-radius:12px; background:#141b2d; border:2px solid #f6c64a; color:#eaf1ff;
@@ -56,10 +55,10 @@ app.get("/", (req, res) => {
   </style>
 </head>
 <body>
-  <header>CodeGoldenAI</header>
+  <header>🚀 CodeGoldenAI</header>
   <div class="hero">
-    <h2>Build Smarter Websites with AI + Code Engineers</h2>
-    <p>Generate websites using AI or work with a Code Engineer.</p>
+    <h2>Build Smarter Websites with AI + Engineers</h2>
+    <p>Choose between AI automation, AdvancedAI (Gemini Pro), or real engineers.</p>
     <div>
       <a class="btn" href="/playground">AI Playground</a>
       <a class="btn" href="/plans">Plans</a>
@@ -124,27 +123,36 @@ app.get("/playground", (req, res) => {
 </html>`);
 });
 
-// ✅ API endpoint
+// ✅ Plans page
+app.get("/plans", (req, res) => {
+  res.send("<h1 style='text-align:center;padding:3rem;'>💳 Plans Page Coming Soon</h1>");
+});
+
+// ✅ Engineer page
+app.get("/engineer", (req, res) => {
+  res.send("<h1 style='text-align:center;padding:3rem;'>👨‍💻 Hire Engineer Page Coming Soon</h1>");
+});
+
+// ✅ AI API endpoint
 app.post("/api/generate-ai", async (req, res) => {
-  let body = "";
-  req.on("data", chunk => { body += chunk.toString(); });
-  req.on("end", async () => {
-    try {
-      const { prompt } = JSON.parse(body);
-      const completion = await client.chat.completions.create({
-        model: "gpt-4o-mini",
-        messages: [
-          { role: "system", content: "You are a coding assistant that generates full website code." },
-          { role: "user", content: prompt }
-        ]
-      });
-      res.json({ code: completion.choices[0].message.content });
-    } catch (err) {
-      console.error("AI error:", err);
-      res.status(500).json({ error: "AI generation failed" });
-    }
-  });
+  try {
+    const { prompt } = req.body;
+    if (!prompt) return res.status(400).json({ error: "No prompt provided" });
+
+    const completion = await client.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        { role: "system", content: "You are a coding assistant that generates website code." },
+        { role: "user", content: prompt }
+      ]
+    });
+
+    res.json({ code: completion.choices[0].message.content });
+  } catch (err) {
+    console.error("AI error:", err);
+    res.status(500).json({ error: "AI generation failed" });
+  }
 });
 
 // Start server
-app.listen(PORT, () => console.log(`✅ Server running at http://localhost:${PORT}`));
+app.listen(PORT, () => console.log(`✅ CodeGoldenAI running at http://localhost:${PORT}`));
