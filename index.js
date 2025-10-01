@@ -1,5 +1,4 @@
-// index.js — CodeGoldenAI
-
+// index.js — CodeGoldenAI (Full Version)
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
@@ -32,7 +31,7 @@ app.use(
 app.use(passport.initialize());
 app.use(passport.session());
 
-// Static files (serve everything from root + public folder)
+// Static files (HTML, images, QR, etc.)
 app.use(express.static(__dirname));
 app.use(express.static(path.join(__dirname, "public")));
 
@@ -41,13 +40,15 @@ const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-// Passport Google Auth
+// ---------------- GOOGLE LOGIN ---------------- //
 passport.use(
   new GoogleStrategy(
     {
       clientID: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      callbackURL: process.env.GOOGLE_CALLBACK_URL || "https://codegoldenai.onrender.com/auth/google/callback",
+      callbackURL:
+        process.env.GOOGLE_CALLBACK_URL ||
+        "https://codegoldenai.onrender.com/auth/google/callback",
     },
     (accessToken, refreshToken, profile, done) => {
       return done(null, profile);
@@ -63,13 +64,16 @@ passport.deserializeUser((obj, done) => {
 });
 
 // Google Auth routes
-app.get("/auth/google", passport.authenticate("google", { scope: ["profile", "email"] }));
+app.get(
+  "/auth/google",
+  passport.authenticate("google", { scope: ["profile", "email"] })
+);
 
 app.get(
   "/auth/google/callback",
   passport.authenticate("google", { failureRedirect: "/login.html" }),
   (req, res) => {
-    res.redirect("/index.html"); // ✅ Redirect to home after login
+    res.redirect("/index.html"); // ✅ after login go home
   }
 );
 
@@ -79,7 +83,7 @@ app.get("/logout", (req, res) => {
   });
 });
 
-// API: Current user info
+// ---------------- USER INFO ---------------- //
 app.get("/api/me", (req, res) => {
   if (!req.user) {
     return res.json({ loggedIn: false });
@@ -89,34 +93,70 @@ app.get("/api/me", (req, res) => {
     email: req.user.emails?.[0]?.value,
     name: req.user.displayName,
     picture: req.user.photos?.[0]?.value,
-    plan: "Free", // default until you build approval system
+    plan: "Free", // placeholder until you add upgrades
   });
 });
 
-// ✅ API: OpenAI Playground
-app.post("/api/generate-ai", async (req, res) => {
+// ---------------- OPENAI ROUTES ---------------- //
+
+// Playground → GPT-4o-mini
+app.post("/api/generate-playground", async (req, res) => {
   try {
     const { prompt } = req.body;
     const completion = await client.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [
-        { role: "system", content: "You are a professional coding assistant that generates full, working code." },
+        { role: "system", content: "You are a helpful coding assistant." },
         { role: "user", content: prompt },
       ],
     });
-    res.json({ code: completion.choices[0].message.content });
+    res.json({ reply: completion.choices[0].message.content });
   } catch (err) {
-    console.error("AI error:", err);
-    res.status(500).json({ error: "AI generation failed" });
+    console.error("Playground AI error:", err);
+    res.status(500).json({ error: "Playground AI failed" });
   }
 });
 
-// ✅ Fallback: Send index.html if path not found
+// AdvancedAI → GPT-4
+app.post("/api/generate-advanced", async (req, res) => {
+  try {
+    const { prompt } = req.body;
+    const completion = await client.chat.completions.create({
+      model: "gpt-4",
+      messages: [
+        {
+          role: "system",
+          content:
+            "You are an advanced assistant for developers. If the user requests code, return clean code blocks.",
+        },
+        { role: "user", content: prompt },
+      ],
+    });
+
+    const text = completion.choices[0].message.content;
+
+    // Extract code block if present
+    const codeMatch = text.match(/```[\s\S]*?```/);
+    const code = codeMatch
+      ? codeMatch[0].replace(/```[\w]*/g, "").trim()
+      : null;
+
+    res.json({
+      text: text.replace(/```[\s\S]*?```/, "").trim(),
+      code,
+    });
+  } catch (err) {
+    console.error("AdvancedAI error:", err);
+    res.status(500).json({ error: "AdvancedAI failed" });
+  }
+});
+
+// ---------------- FALLBACK ---------------- //
 app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "index.html"));
 });
 
 // Start server
-app.listen(PORT, () => {
-  console.log(`✅ Server running at http://localhost:${PORT}`);
-});
+app.listen(PORT, () =>
+  console.log(`✅ Server running at http://localhost:${PORT}`)
+);
