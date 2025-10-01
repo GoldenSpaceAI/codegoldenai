@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Requests • CodeGoldenAI</title>
+  <style>
+    body {
+      font-family: "Segoe UI", sans-serif;
+      background: #f7fafc;
+      padding: 2rem;
+      color: #222;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 2rem;
+      color: #eb8b36;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 2rem;
+    }
+    th, td {
+      padding: 0.8rem;
+      border-bottom: 1px solid #ddd;
+      text-align: left;
+    }
+    th {
+      background: #f6c64a;
+      color: #222;
+    }
+    button {
+      padding: 0.5rem 1rem;
+      border: none;
+      border-radius: 6px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .approve {
+      background: #28a745;
+      color: white;
+    }
+    .decline {
+      background: #dc3545;
+      color: white;
+    }
+    .approve:hover { opacity: 0.9; }
+    .decline:hover { opacity: 0.9; }
+  </style>
+</head>
+<body>
+  <h1>📋 Pending Upgrade Requests</h1>
+  <table id="requestsTable">
+    <thead>
+      <tr>
+        <th>Email</th>
+        <th>Requested Plan</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <script>
+    async function loadRequests() {
+      const res = await fetch("/api/admin/requests");
+      const requests = await res.json();
+
+      const tbody = document.querySelector("#requestsTable tbody");
+      tbody.innerHTML = "";
+
+      if (requests.length === 0) {
+        tbody.innerHTML = "<tr><td colspan='3'>✅ No pending requests</td></tr>";
+        return;
+      }
+
+      requests.forEach(r => {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>${r.email}</td>
+          <td>${r.plan}</td>
+          <td>
+            <button class="approve" onclick="approve('${r.email}','${r.plan}')">Approve</button>
+            <button class="decline" onclick="decline('${r.email}')">Decline</button>
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    async function approve(email, plan) {
+      await fetch("/api/admin/approve", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, plan })
+      });
+      loadRequests();
+    }
+
+    async function decline(email) {
+      await fetch("/api/admin/decline", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email })
+      });
+      loadRequests();
+    }
+
+    loadRequests();
+  </script>
+</body>
+</html>
