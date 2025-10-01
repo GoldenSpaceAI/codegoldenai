@@ -6,23 +6,35 @@
   <title>CodeGoldenAI • AI Website Builder</title>
   <style>
     :root {
-      --bg: #070b14;
+      --bg: #05060a;
       --text: #f1f5ff;
       --muted: #9da9c6;
       --gold1: #f6c64a;
       --gold2: #eb8b36;
-      --card: #10182c;
-      --radius: 16px;
-      --shadow: 0 25px 70px rgba(0,0,0,.55);
+      --card: rgba(15, 18, 30, 0.85);
+      --radius: 18px;
+      --shadow: 0 25px 80px rgba(0,0,0,.55);
       --max: 1200px;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       font-family: "Segoe UI", Roboto, sans-serif;
-      background: var(--bg);
       color: var(--text);
       line-height: 1.6;
+      background: url("https://images.unsplash.com/photo-1446776811953-b23d57bd21aa?auto=format&fit=crop&w=1920&q=80") no-repeat center center fixed;
+      background-size: cover;
     }
+
+    /* Overlay to darken wallpaper */
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background: rgba(5,6,10,0.82);
+      backdrop-filter: blur(2px);
+      z-index: -1;
+    }
+
     /* Navbar */
     nav {
       max-width: var(--max);
@@ -33,11 +45,12 @@
       align-items: center;
     }
     nav h1 {
-      font-size: 1.5rem;
+      font-size: 1.6rem;
       font-weight: bold;
       background: linear-gradient(45deg, var(--gold1), var(--gold2));
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
+      text-shadow: 0 0 15px rgba(246,198,74,0.4);
     }
     nav a {
       margin-left: 1.5rem;
@@ -47,12 +60,11 @@
       transition: color .2s;
     }
     nav a:hover { color: var(--gold1); }
+
     /* Hero */
     .hero {
-      background: radial-gradient(circle at 30% 20%, rgba(246,198,74,.12), transparent 60%),
-                  radial-gradient(circle at 80% 60%, rgba(235,139,54,.12), transparent 50%),
-                  var(--bg);
-      padding: 5rem 2rem;
+      padding: 6rem 2rem;
+      text-align: center;
     }
     .hero-inner {
       max-width: var(--max);
@@ -63,15 +75,16 @@
       align-items: center;
     }
     .hero-text h2 {
-      font-size: 2.8rem;
+      font-size: 3rem;
       line-height: 1.2;
       margin-bottom: 1rem;
       background: linear-gradient(45deg, var(--gold1), var(--gold2));
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
+      text-shadow: 0 0 20px rgba(235,139,54,0.3);
     }
     .hero-text p {
-      font-size: 1.1rem;
+      font-size: 1.15rem;
       color: var(--muted);
       margin-bottom: 2rem;
     }
@@ -79,9 +92,10 @@
       display: flex;
       gap: 1rem;
       flex-wrap: wrap;
+      justify-content: center;
     }
     .btn {
-      padding: 0.9rem 1.6rem;
+      padding: 1rem 1.8rem;
       border-radius: var(--radius);
       font-weight: bold;
       text-decoration: none;
@@ -99,13 +113,14 @@
       border: 2px solid var(--gold1);
       color: var(--text);
     }
-    .btn-secondary:hover { background: rgba(246,198,74,.1); }
+    .btn-secondary:hover { background: rgba(246,198,74,.12); }
+
     .hero-visual {
       text-align: center;
     }
     .hero-visual .box {
       width: 100%;
-      max-width: 400px;
+      max-width: 420px;
       margin: 0 auto;
       height: 260px;
       border-radius: var(--radius);
@@ -117,6 +132,7 @@
       color: var(--muted);
       font-size: 1.1rem;
     }
+
     /* Features */
     .features {
       max-width: var(--max);
@@ -132,22 +148,27 @@
       border-radius: var(--radius);
       text-align: center;
       box-shadow: var(--shadow);
+      transition: transform .3s;
+    }
+    .feature:hover {
+      transform: translateY(-8px);
     }
     .feature h3 {
-      font-size: 1.3rem;
-      margin-bottom: 0.6rem;
+      font-size: 1.35rem;
+      margin-bottom: 0.8rem;
       background: linear-gradient(45deg, var(--gold1), var(--gold2));
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
     }
     .feature p { color: var(--muted); }
+
     footer {
       text-align: center;
       padding: 2rem 1rem;
       color: var(--muted);
       font-size: 0.9rem;
       border-top: 1px solid rgba(255,255,255,.08);
-      margin-top: 3rem;
+      margin-top: 4rem;
     }
   </style>
 </head>
@@ -167,14 +188,14 @@
     <div class="hero-inner">
       <div class="hero-text">
         <h2>Smarter Websites, Powered by AI + Engineers</h2>
-        <p>From instant AI-generated sites to fully custom websites built with care by Code Engineers. CodeGoldenAI is your shortcut to building the future.</p>
+        <p>From instant AI-generated sites to fully custom websites built with care by real Code Engineers. CodeGoldenAI is your shortcut to building the future.</p>
         <div class="btns">
-          <a href="/playground.html" class="btn btn-primary">Try AI Playground</a>
-          <a href="/plans.html" class="btn btn-secondary">View Plans</a>
+          <a href="/playground.html" class="btn btn-primary">🚀 Try AI Playground</a>
+          <a href="/plans.html" class="btn btn-secondary">💳 View Plans</a>
         </div>
       </div>
       <div class="hero-visual">
-        <div class="box">✨ Preview of Your Website ✨</div>
+        <div class="box">✨ Live Preview Area ✨</div>
       </div>
     </div>
   </section>
@@ -186,12 +207,12 @@
       <p>Describe your idea, and AI writes full HTML, CSS, and JS in seconds.</p>
     </div>
     <div class="feature">
-      <h3>👨‍💻 Code Engineer Service</h3>
-      <p>Need precision? Work with a real Code Engineer to build your dream website.</p>
+      <h3>🤖 AdvancedAI (Gemini Pro)</h3>
+      <p>Harness next-gen AI power for professional, scalable web apps.</p>
     </div>
     <div class="feature">
-      <h3>💳 Affordable Plans</h3>
-      <p>From free to Pro — flexible pricing for everyone, starting at just $10.</p>
+      <h3>👨‍💻 Real Engineer Service</h3>
+      <p>Need precision and expertise? Hire a Coding Engineer directly.</p>
     </div>
   </section>
 
