@@ -110,23 +110,74 @@
       margin-left: 0.5rem;
       background: #444;
     }
+
+    /* Password gate */
+    .hidden { display: none; }
+    #gate {
+      max-width: 720px;
+      margin: 2rem auto;
+      background: var(--card);
+      padding: 1.2rem 1.2rem 1.6rem;
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.12);
+      text-align: center;
+    }
+    #gate input[type="password"]{
+      width: 80%;
+      padding: 0.8rem;
+      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.2);
+      font-size: 1rem;
+      margin-top: 0.6rem;
+      background: transparent;
+      color: var(--text);
+    }
+    #gate .err { color: #ff6b6b; font-weight: 600; margin-top: .6rem; display:none; }
+    #wrap { display:flex; flex-direction:column; height:100%; }
   </style>
 </head>
 <body class="dark">
   <header>⚡ AdvancedAI • Powered by GPT-4</header>
 
-  <div id="chat"></div>
+  <!-- Password Gate -->
+  <section id="gate">
+    <h3>🔒 Enter Password to Unlock AdvancedAI</h3>
+    <p>Please enter your password to unlock this feature.<br>
+      If you don’t have a password, please upgrade your plan to get one.</p>
+    <input id="aiPass" type="password" placeholder="Enter password here" />
+    <div style="margin-top:.6rem;">
+      <button onclick="unlockAI()">Unlock</button>
+    </div>
+    <div id="gateErr" class="err">❌ Incorrect password. Try again.</div>
+  </section>
 
-  <footer>
-    <input id="prompt" placeholder="Ask AdvancedAI anything..." />
-    <button onclick="sendMessage()">Send</button>
-    <button class="theme-toggle" onclick="toggleTheme()">🌓</button>
-  </footer>
+  <!-- Chat wrapper (hidden until unlocked) -->
+  <div id="wrap" class="hidden">
+    <div id="chat"></div>
+
+    <footer>
+      <input id="prompt" placeholder="Ask AdvancedAI anything..." />
+      <button onclick="sendMessage()">Send</button>
+      <button class="theme-toggle" onclick="toggleTheme()">🌓</button>
+    </footer>
+  </div>
 
   <script>
     const chat = document.getElementById("chat");
     const input = document.getElementById("prompt");
     let messages = JSON.parse(localStorage.getItem("advancedai_msgs")) || [];
+
+    // Password unlock
+    function unlockAI() {
+      const v = (document.getElementById('aiPass').value || '').trim();
+      const lastSix = v.slice(-6);
+      if (lastSix === "444212") {
+        document.getElementById('gate').classList.add('hidden');
+        document.getElementById('wrap').classList.remove('hidden');
+      } else {
+        document.getElementById('gateErr').style.display = 'block';
+      }
+    }
 
     // Render chat messages
     function renderMessages() {
