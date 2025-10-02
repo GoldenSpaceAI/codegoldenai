@@ -1,25 +1,26 @@
-// index.js — CodeGoldenAI full backend
+// index.js — CodeGoldenAI backend
+
 import express from "express";
 import session from "express-session";
+import dotenv from "dotenv";
+import cors from "cors";
 import passport from "passport";
 import { Strategy as GoogleStrategy } from "passport-google-oauth20";
-import dotenv from "dotenv";
-import bodyParser from "body-parser";
 import path from "path";
 import { fileURLToPath } from "url";
 import { OpenAI } from "openai";
 
 dotenv.config();
+
 const app = express();
 const PORT = process.env.PORT || 3000;
-
-// Static files (HTML, images like QR.jpg)
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-app.use(express.static(__dirname));
 
-// Middleware
-app.use(bodyParser.json());
+// ---- Middleware ----
+app.use(cors());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(
   session({
     secret: process.env.SESSION_SECRET || "supersecret",
@@ -27,63 +28,39 @@ app.use(
     saveUninitialized: false,
   })
 );
+
+// ---- Passport Setup ----
 app.use(passport.initialize());
 app.use(passport.session());
-
-// OpenAI client
-const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
-// Memory "database"
-let users = {}; // { email: { name, picture, plan, expiry } }
-let upgradeRequests = []; // { email, plan, date, status, expiry }
-
-// Google OAuth
-const callbackURL =
-  process.env.GOOGLE_CALLBACK_URL ||
-  "http://localhost:3000/auth/google/callback";
 
 passport.use(
   new GoogleStrategy(
     {
       clientID: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      callbackURL,
+      callbackURL: "https://codegoldenai.onrender.com/auth/google/callback",
     },
     (accessToken, refreshToken, profile, done) => {
-      const email = profile.emails[0].value;
-      const user = {
-        email,
+      return done(null, {
+        email: profile.emails[0].value,
         name: profile.displayName,
-        picture: profile.photos?.[0]?.value,
-      };
-      // Default Free plan
-      if (!users[email]) {
-        users[email] = { ...user, plan: "Free", expiry: null };
-      }
-      return done(null, user);
+        picture: profile.photos[0].value,
+      });
     }
   )
 );
 
-passport.serializeUser((user, done) => done(null, user.email));
-passport.deserializeUser((email, done) => done(null, users[email]));
+passport.serializeUser((user, done) => done(null, user));
+passport.deserializeUser((user, done) => done(null, user));
 
-// Helpers
-function ensureAuth(req, res, next) {
-  if (req.isAuthenticated()) return next();
-  res.redirect("/login.html");
-}
-function requireAdmin(req, res, next) {
-  if (
-    req.isAuthenticated() &&
-    req.user.email === process.env.ADMIN_EMAIL
-  ) {
-    return next();
-  }
-  res.status(403).send("Access denied");
-}
+// ---- OpenAI Setup ----
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-// --- Auth Routes ---
+// ---- Memory (temporary store) ----
+let upgradeRequests = []; // { email, plan }
+let activePlans = {}; // { email: { plan, expiresAt } }
+
+// ---- Auth Routes ----
 app.get("/auth/google", passport.authenticate("google", { scope: ["profile", "email"] }));
 
 app.get(
@@ -100,116 +77,106 @@ app.get("/logout", (req, res) => {
   });
 });
 
-// --- User API ---
+// ---- API: User Info ----
 app.get("/api/me", (req, res) => {
   if (!req.user) return res.json({ loggedIn: false });
-
-  const email = req.user.email;
-  const user = users[email];
-
-  // Auto-expire plans
-  if (user.expiry && new Date(user.expiry) < new Date()) {
-    users[email].plan = "Free";
-    users[email].expiry = null;
-  }
-
-  res.json({ loggedIn: true, ...users[email] });
-});
-
-// --- Plan Upgrade ---
-app.post("/api/request-upgrade", ensureAuth, (req, res) => {
-  const email = req.user.email;
-  const { plan } = req.body;
-
-  upgradeRequests.push({
-    email,
-    plan,
-    date: Date.now(),
-    status: "pending",
-    expiry: null,
+  const planData = activePlans[req.user.email] || { plan: "Free" };
+  res.json({
+    loggedIn: true,
+    email: req.user.email,
+    name: req.user.name,
+    picture: req.user.picture,
+    plan: planData.plan,
   });
-
-  res.json({ success: true, message: "Upgrade request submitted" });
 });
 
-// --- Admin APIs ---
-app.get("/api/admin/requests", requireAdmin, (req, res) => {
+// ---- API: Plan Proof ----
+app.post("/api/send-plan-proof", (req, res) => {
+  if (!req.user) return res.status(403).json({ error: "Not logged in" });
+  const { plan } = req.body;
+  if (!plan) return res.status(400).json({ error: "Plan required" });
+
+  upgradeRequests.push({ email: req.user.email, plan });
+  res.json({ success: true });
+});
+
+// ---- Admin API ----
+app.get("/api/admin/requests", (req, res) => {
+  if (!req.user || req.user.email !== process.env.ADMIN_EMAIL) {
+    return res.status(403).json({ error: "Unauthorized" });
+  }
   res.json(upgradeRequests);
 });
 
-app.post("/api/admin/approve", requireAdmin, (req, res) => {
+app.post("/api/admin/approve", (req, res) => {
+  if (!req.user || req.user.email !== process.env.ADMIN_EMAIL) {
+    return res.status(403).json({ error: "Unauthorized" });
+  }
   const { email, plan } = req.body;
-  const request = upgradeRequests.find(
-    (r) => r.email === email && r.status === "pending"
-  );
+  if (!email || !plan) return res.status(400).json({ error: "Missing fields" });
 
-  if (!request) return res.status(404).json({ error: "Request not found" });
+  const expiresAt = Date.now() + 30 * 24 * 60 * 60 * 1000; // 30 days
+  activePlans[email] = { plan, expiresAt };
 
-  const expiry = new Date();
-  expiry.setDate(expiry.getDate() + 30); // +30 days
-
-  request.status = "active";
-  request.expiry = expiry;
-
-  users[email].plan = plan;
-  users[email].expiry = expiry;
-
+  upgradeRequests = upgradeRequests.filter((r) => r.email !== email);
   res.json({ success: true });
 });
 
-app.post("/api/admin/decline", requireAdmin, (req, res) => {
+app.post("/api/admin/decline", (req, res) => {
+  if (!req.user || req.user.email !== process.env.ADMIN_EMAIL) {
+    return res.status(403).json({ error: "Unauthorized" });
+  }
   const { email } = req.body;
-  upgradeRequests = upgradeRequests.filter(
-    (r) => !(r.email === email && r.status === "pending")
-  );
+  upgradeRequests = upgradeRequests.filter((r) => r.email !== email);
   res.json({ success: true });
 });
 
-// --- AI APIs ---
-// Playground (GPT-4o-mini)
-app.post("/api/generate-ai", ensureAuth, async (req, res) => {
-  const { prompt } = req.body;
+// ---- AI Endpoints ----
+app.post("/api/playground", async (req, res) => {
+  if (!req.user) return res.status(403).json({ error: "Not logged in" });
+
+  const planData = activePlans[req.user.email] || { plan: "Free" };
+  if (planData.plan === "Free") {
+    return res.status(403).json({ error: "Upgrade required to use Playground" });
+  }
+
+  const { message } = req.body;
   try {
-    const completion = await client.chat.completions.create({
+    const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
-      messages: [
-        { role: "system", content: "You are a coding assistant." },
-        { role: "user", content: prompt },
-      ],
+      messages: [{ role: "user", content: message }],
     });
-    res.json({ code: completion.choices[0].message.content });
+    res.json({ reply: completion.choices[0].message.content });
   } catch (err) {
-    console.error("AI error:", err);
-    res.status(500).json({ error: "AI generation failed" });
+    console.error(err);
+    res.status(500).json({ error: "AI error" });
   }
 });
 
-// AdvancedAI (GPT-4) — Only Plus/Pro
-app.post("/api/advanced-ai", ensureAuth, async (req, res) => {
-  const email = req.user.email;
-  const plan = users[email]?.plan || "Free";
+app.post("/api/advancedai", async (req, res) => {
+  if (!req.user) return res.status(403).json({ error: "Not logged in" });
 
-  if (plan === "Free") {
-    return res.status(403).json({ error: "Upgrade required to use AdvancedAI." });
+  const planData = activePlans[req.user.email] || { plan: "Free" };
+  if (planData.plan !== "Pro") {
+    return res.status(403).json({ error: "Pro plan required" });
   }
 
-  const { prompt } = req.body;
+  const { message } = req.body;
   try {
-    const completion = await client.chat.completions.create({
+    const completion = await openai.chat.completions.create({
       model: "gpt-4",
-      messages: [
-        { role: "system", content: "You are an advanced AI assistant." },
-        { role: "user", content: prompt },
-      ],
+      messages: [{ role: "user", content: message }],
     });
-    res.json({ code: completion.choices[0].message.content });
+    res.json({ reply: completion.choices[0].message.content });
   } catch (err) {
-    console.error("AI error:", err);
-    res.status(500).json({ error: "AI generation failed" });
+    console.error(err);
+    res.status(500).json({ error: "AI error" });
   }
 });
 
-// --- Start Server ---
-app.listen(PORT, () =>
-  console.log(`✅ Server running on http://localhost:${PORT}`)
-);
+// ---- Static Pages ----
+app.use(express.static(path.join(__dirname)));
+
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on http://localhost:${PORT}`);
+});
