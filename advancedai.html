@@ -8,15 +8,12 @@
     body {
       margin: 0;
       font-family: "Segoe UI", sans-serif;
-      background: var(--bg);
-      color: var(--text);
       display: flex;
       flex-direction: column;
       height: 100vh;
-      overflow: hidden; /* prevent scroll while locked */
+      color: var(--text);
     }
 
-    /* THEMES (unchanged) */
     :root.light {
       --bg: url("https://images.unsplash.com/photo-1581091012184-5c67d6f64a7d?auto=format&fit=crop&w=1920&q=80") no-repeat center/cover;
       --overlay: rgba(255,255,255,0.75);
@@ -36,9 +33,17 @@
       content: "";
       position: fixed;
       inset: 0;
+      background: var(--bg);
+      background-size: cover;
+      z-index: -2;
+    }
+    body::after {
+      content: "";
+      position: fixed;
+      inset: 0;
       background: var(--overlay);
       backdrop-filter: blur(4px);
-      z-index: -2;
+      z-index: -1;
     }
 
     header {
@@ -51,8 +56,43 @@
       -webkit-text-fill-color: transparent;
     }
 
-    /* Chat UI (unchanged) */
-    #wrap { display:flex; flex-direction:column; height:100%; }
+    #unlock-container {
+      margin: auto;
+      background: white;
+      padding: 2rem;
+      border-radius: 12px;
+      max-width: 400px;
+      text-align: center;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.2);
+      color: #222;
+    }
+    #unlock-container h2 {
+      margin-bottom: 1rem;
+    }
+    #unlock-container input {
+      width: 100%;
+      padding: 0.8rem;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      margin-bottom: 1rem;
+    }
+    #unlock-container button {
+      padding: 0.8rem 1.2rem;
+      border: none;
+      border-radius: 8px;
+      background: linear-gradient(45deg,#f6c64a,#eb8b36);
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    #chat-container {
+      display: none; /* hidden until unlocked */
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
     #chat {
       flex: 1;
       overflow-y: auto;
@@ -65,7 +105,6 @@
       padding: 1rem;
       border-radius: 10px;
       max-width: 80%;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
     }
     .user { background: var(--card); align-self: flex-end; }
     .ai { background: var(--card); align-self: flex-start; }
@@ -77,29 +116,20 @@
       overflow-x: auto;
       margin-top: 0.5rem;
     }
-    .copy-btn {
-      background: #f6c64a;
-      border: none;
-      padding: 0.3rem 0.8rem;
-      font-size: 0.8rem;
-      border-radius: 5px;
-      margin-top: 0.3rem;
-      cursor: pointer;
-    }
 
     footer {
       display: flex;
       padding: 1rem;
       background: rgba(255,255,255,0.1);
     }
-    input {
+    footer input {
       flex: 1;
       padding: 0.8rem;
-      border: none;
       border-radius: 8px;
+      border: none;
       font-size: 1rem;
     }
-    button {
+    footer button {
       margin-left: 0.5rem;
       padding: 0.8rem 1rem;
       border: none;
@@ -109,138 +139,63 @@
       font-weight: bold;
       cursor: pointer;
     }
-    .theme-toggle { margin-left: 0.5rem; background: #444; }
-
-    /* FULL-SCREEN PASSWORD OVERLAY */
-    #lockOverlay {
-      position: fixed;
-      inset: 0;
-      z-index: 10;               /* sits above everything */
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 1rem;
-      background: transparent;   /* blur already applied on body::before */
+    .theme-toggle {
+      margin-left: 0.5rem;
+      background: #444;
     }
-    #gate {
-      width: 100%;
-      max-width: 720px;
-      background: var(--card);
-      padding: 1.2rem 1.2rem 1.6rem;
-      border-radius: 12px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.12);
-      text-align: center;
-    }
-    #gate input[type="password"]{
-      width: 80%;
-      padding: 0.8rem;
-      border-radius: 8px;
-      border: 1px solid rgba(255,255,255,0.2);
-      font-size: 1rem;
-      margin-top: 0.6rem;
-      background: transparent;
-      color: var(--text);
-    }
-    #gate .err { color: #ff6b6b; font-weight: 600; margin-top: .6rem; display:none; }
-
-    /* Hide helpers */
-    .hidden { display: none; }
   </style>
 </head>
 <body class="dark">
   <header>⚡ AdvancedAI • Powered by GPT-4</header>
 
-  <!-- FULL-SCREEN PASSWORD OVERLAY (shown first, blocks page) -->
-  <div id="lockOverlay">
-    <section id="gate">
-      <h3>🔒 Enter Password to Unlock AdvancedAI</h3>
-      <p>Please enter your password to unlock this feature.<br>
-        If you don’t have a password, please upgrade your plan to get one.</p>
-      <input id="aiPass" type="password" placeholder="Enter password here" />
-      <div style="margin-top:.6rem;">
-        <button id="unlockBtn">Unlock</button>
-      </div>
-      <div id="gateErr" class="err">❌ Incorrect password. Try again.</div>
-    </section>
+  <!-- Unlock -->
+  <div id="unlock-container">
+    <h2>🔒 Enter Password to Unlock AdvancedAI</h2>
+    <p>Please enter your password to unlock this feature.<br>
+    If you don’t have one, please upgrade your plan.</p>
+    <input type="password" id="unlock-input" placeholder="Enter password here" />
+    <button onclick="checkPassword()">Unlock</button>
+    <p id="unlock-error" style="color:red; display:none;">❌ Incorrect password</p>
   </div>
 
-  <!-- CHAT UI (exists but is covered until unlocked) -->
-  <div id="wrap">
+  <!-- Chat -->
+  <div id="chat-container">
     <div id="chat"></div>
     <footer>
       <input id="prompt" placeholder="Ask AdvancedAI anything..." />
-      <button id="sendBtn">Send</button>
-      <button class="theme-toggle" id="themeBtn">🌓</button>
+      <button onclick="sendMessage()">Send</button>
+      <button class="theme-toggle" onclick="toggleTheme()">🌓</button>
     </footer>
   </div>
 
   <script>
+    const unlockContainer = document.getElementById("unlock-container");
+    const chatContainer = document.getElementById("chat-container");
     const chat = document.getElementById("chat");
     const input = document.getElementById("prompt");
-    const lockOverlay = document.getElementById("lockOverlay");
-    const gateErr = document.getElementById("gateErr");
-    const unlockBtn = document.getElementById("unlockBtn");
-    const sendBtn = document.getElementById("sendBtn");
-    const themeBtn = document.getElementById("themeBtn");
-
     let messages = JSON.parse(localStorage.getItem("advancedai_msgs")) || [];
-    let unlocked = false;
 
-    // Prevent sending while locked
-    sendBtn.addEventListener("click", () => {
-      if (!unlocked) return;   // ignore clicks while locked
-      sendMessage();
-    });
-    input.addEventListener("keydown", (e) => {
-      if (!unlocked) return;
-      if (e.key === "Enter") sendMessage();
-    });
-
-    // Unlock flow (last 6 must be 444212)
-    function unlockAI() {
-      const v = (document.getElementById('aiPass').value || '').trim();
-      const lastSix = v.slice(-6);
-      if (lastSix === "444212") {
-        unlocked = true;
-        lockOverlay.classList.add('hidden');  // remove overlay
-        document.body.style.overflow = "auto";
-        renderMessages();                     // now render any saved convo
+    function checkPassword() {
+      const val = document.getElementById("unlock-input").value.trim();
+      if (val.slice(-6) === "444212") {
+        unlockContainer.style.display = "none";
+        chatContainer.style.display = "flex";
       } else {
-        gateErr.style.display = 'block';
+        document.getElementById("unlock-error").style.display = "block";
       }
     }
-    unlockBtn.addEventListener("click", unlockAI);
-    document.getElementById("aiPass").addEventListener("keydown", (e) => {
-      if (e.key === "Enter") unlockAI();
-    });
 
-    // Render chat messages (unchanged logic)
     function renderMessages() {
       chat.innerHTML = "";
       messages.forEach(m => {
         const div = document.createElement("div");
         div.className = "msg " + (m.role === "user" ? "user" : "ai");
         div.innerHTML = `<div>${m.text}</div>`;
-        if (m.code) {
-          const pre = document.createElement("pre");
-          pre.textContent = m.code;
-          const copy = document.createElement("button");
-          copy.className = "copy-btn";
-          copy.textContent = "Copy Code";
-          copy.onclick = () => {
-            navigator.clipboard.writeText(m.code);
-            copy.textContent = "Copied!";
-            setTimeout(() => (copy.textContent = "Copy Code"), 1500);
-          };
-          div.appendChild(pre);
-          div.appendChild(copy);
-        }
         chat.appendChild(div);
       });
       chat.scrollTop = chat.scrollHeight;
     }
 
-    // Send message to backend (uses your existing /api/generate-advanced)
     async function sendMessage() {
       const prompt = input.value.trim();
       if (!prompt) return;
@@ -256,28 +211,17 @@
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ prompt }),
         });
-
-        if (!res.ok) {
-          const err = await res.text().catch(()=> "");
-          messages.push({ role: "ai", text: "⚠️ Error generating response." });
-          renderMessages();
-          console.error("AdvancedAI error:", res.status, err);
-          return;
-        }
-
         const data = await res.json();
-        messages.push({ role: "ai", text: data.text, code: data.code });
+        messages.push({ role: "ai", text: data.text || "⚠️ Error generating response." });
         if (messages.length > 20) messages.shift();
         localStorage.setItem("advancedai_msgs", JSON.stringify(messages));
         renderMessages();
-      } catch (e) {
-        console.error(e);
+      } catch (err) {
         messages.push({ role: "ai", text: "⚠️ Error generating response." });
         renderMessages();
       }
     }
 
-    // Theme toggle (unchanged)
     function toggleTheme() {
       const body = document.body;
       if (body.classList.contains("dark")) {
@@ -288,10 +232,8 @@
         body.classList.add("dark");
       }
     }
-    themeBtn.addEventListener("click", toggleTheme);
 
-    // IMPORTANT: Do NOT render messages until unlocked
-    // renderMessages();
+    renderMessages();
   </script>
 </body>
 </html>
