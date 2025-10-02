@@ -44,7 +44,7 @@
       -webkit-text-fill-color: transparent;
     }
     .price {
-      font-size: 2rem;
+      font-size: 1.6rem;
       font-weight: bold;
       margin: 1rem 0;
       color: #222;
@@ -53,6 +53,7 @@
       list-style: none;
       padding: 0;
       margin: 1rem 0;
+      text-align: left;
     }
     ul li {
       margin: 0.5rem 0;
@@ -60,18 +61,22 @@
     }
     .wallet {
       margin-top: 1rem;
-      font-size: 0.9rem;
+      font-size: 0.95rem;
       color: #333;
       word-break: break-all;
       padding: 0.5rem;
       background: #f1f1f1;
       border-radius: 8px;
+      text-align: left;
     }
-    .qr {
+    .steps {
       margin-top: 1rem;
-      max-width: 180px;
-      border: 2px solid #eee;
-      border-radius: 12px;
+      text-align: left;
+      font-size: 0.95rem;
+      background: #fff9e6;
+      border-left: 4px solid #f6c64a;
+      padding: 0.8rem;
+      border-radius: 8px;
     }
     .btn {
       display: inline-block;
@@ -92,9 +97,10 @@
     .success {
       margin-top: 1rem;
       padding: 1rem;
-      border-radius: 10px;
+      border-radius: 8px;
       background: #e6ffed;
       color: #1a7f37;
+      font-weight: bold;
       display: none;
     }
   </style>
@@ -105,7 +111,7 @@
     <!-- Free Plan -->
     <div class="plan">
       <h2>Free</h2>
-      <div class="price">$0</div>
+      <div class="price">0 USDT/month</div>
       <ul>
         <li>✅ Access AI Playground</li>
         <li>✅ Simple Website Generator</li>
@@ -116,59 +122,74 @@
     <!-- Plus Plan -->
     <div class="plan">
       <h2>Plus</h2>
-      <div class="price">5 USDT</div>
+      <div class="price">5 USDT/month</div>
       <ul>
         <li>✅ Simple Website Generator</li>
         <li>✅ Advanced Website Generator</li>
       </ul>
-      <p><strong>Payment Method:</strong> Tether (USDT) — TRC20 only</p>
-      <div class="wallet">Wallet:<br><strong>TCN6eVtHFNtPAJNfebgGGm8c2h71NWYY9P</strong></div>
-      <img src="https://i.ibb.co/kxVsnD6/usdt-qr.jpg" alt="USDT TRC20 QR Code" class="qr">
-      <button class="btn btn-primary" onclick="sendProof('Plus')">📩 Submit Proof</button>
-      <div id="plusSuccess" class="success">✅ Request submitted! Wait for approval.</div>
+      <div class="wallet">
+        <strong>Payment Method:</strong><br>
+        Coin: <b>Tether (USDT)</b><br>
+        Network: <b>TRC20</b><br>
+        Wallet Address: <br>
+        <strong>TCN6eVtHFNtPAJNfebgGGm8c2h71NWYY9P</strong>
+      </div>
+      <div class="steps">
+        <b>Steps:</b>
+        <ol>
+          <li>Send <b>5 USDT (TRC20)</b> to the wallet above.</li>
+          <li>Email your payment receipt (screenshot) to <a href="mailto:goldenspaceais@gmail.com">goldenspaceais@gmail.com</a>.</li>
+          <li>Click the Approve button below to confirm your request.</li>
+        </ol>
+      </div>
+      <button class="btn btn-primary" onclick="requestUpgrade('plus')">✔️ I Paid — Approve Request</button>
+      <div class="success" id="plusSuccess">✅ Request sent. Pending admin approval.</div>
     </div>
 
     <!-- Pro Plan -->
     <div class="plan">
       <h2>Pro</h2>
-      <div class="price">20 USDT</div>
+      <div class="price">20 USDT/month</div>
       <ul>
         <li>✅ Unlimited Playground Access</li>
         <li>✅ Simple & Advanced Generators</li>
         <li>✅ Priority Engineer Support</li>
       </ul>
-      <p><strong>Payment Method:</strong> Tether (USDT) — TRC20 only</p>
-      <div class="wallet">Wallet:<br><strong>TCN6eVtHFNtPAJNfebgGGm8c2h71NWYY9P</strong></div>
-      <img src="https://i.ibb.co/kxVsnD6/usdt-qr.jpg" alt="USDT TRC20 QR Code" class="qr">
-      <button class="btn btn-primary" onclick="sendProof('Pro')">📩 Submit Proof</button>
-      <div id="proSuccess" class="success">✅ Request submitted! Wait for approval.</div>
+      <div class="wallet">
+        <strong>Payment Method:</strong><br>
+        Coin: <b>Tether (USDT)</b><br>
+        Network: <b>TRC20</b><br>
+        Wallet Address: <br>
+        <strong>TCN6eVtHFNtPAJNfebgGGm8c2h71NWYY9P</strong>
+      </div>
+      <div class="steps">
+        <b>Steps:</b>
+        <ol>
+          <li>Send <b>20 USDT (TRC20)</b> to the wallet above.</li>
+          <li>Email your payment receipt (screenshot) to <a href="mailto:goldenspaceais@gmail.com">goldenspaceais@gmail.com</a>.</li>
+          <li>Click the Approve button below to confirm your request.</li>
+        </ol>
+      </div>
+      <button class="btn btn-primary" onclick="requestUpgrade('pro')">✔️ I Paid — Approve Request</button>
+      <div class="success" id="proSuccess">✅ Request sent. Pending admin approval.</div>
     </div>
   </main>
 
   <script>
-    async function sendProof(plan) {
+    async function requestUpgrade(plan) {
       try {
-        const resUser = await fetch("/api/me");
-        const user = await resUser.json();
-
-        if (!user.loggedIn) {
-          alert("Please log in first.");
-          return;
-        }
-
-        const res = await fetch("/api/send-plan-proof", {
+        const res = await fetch("/api/upgrade", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ plan })
         });
-
         if (res.ok) {
-          document.getElementById(plan.toLowerCase() + "Success").style.display = "block";
+          document.getElementById(plan + "Success").style.display = "block";
         } else {
-          alert("❌ Failed to submit proof. Try again.");
+          alert("❌ Failed to send request. Please log in first.");
         }
       } catch (err) {
-        console.error(err);
+        console.error("Upgrade request error:", err);
         alert("Error sending request.");
       }
     }
