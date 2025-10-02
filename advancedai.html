@@ -15,7 +15,7 @@
       height: 100vh;
     }
 
-    /* THEMES (kept as-is) */
+    /* THEMES (unchanged) */
     :root.light {
       --bg: url("https://images.unsplash.com/photo-1581091012184-5c67d6f64a7d?auto=format&fit=crop&w=1920&q=80") no-repeat center/cover;
       --overlay: rgba(255,255,255,0.75);
@@ -50,7 +50,7 @@
       -webkit-text-fill-color: transparent;
     }
 
-    /* Chat UI */
+    /* Chat UI (unchanged) */
     #chat {
       flex: 1;
       overflow-y: auto;
@@ -109,7 +109,7 @@
     }
     .theme-toggle { margin-left: 0.5rem; background: #444; }
 
-    /* Password gate (same behavior as engineer.html) */
+    /* Password gate */
     .hidden { display: none; }
     #gate {
       max-width: 720px;
@@ -131,13 +131,15 @@
       color: var(--text);
     }
     #gate .err { color: #ff6b6b; font-weight: 600; margin-top: .6rem; display:none; }
+
+    /* Wrap the entire chat UI so it's fully hidden before unlock */
     #wrap { display:flex; flex-direction:column; height:100%; }
   </style>
 </head>
 <body class="dark">
   <header>⚡ AdvancedAI • Powered by GPT-4</header>
 
-  <!-- Password Gate -->
+  <!-- PASSWORD GATE (shown first) -->
   <section id="gate">
     <h3>🔒 Enter Password to Unlock AdvancedAI</h3>
     <p>Please enter your password to unlock this feature.<br>
@@ -149,7 +151,7 @@
     <div id="gateErr" class="err">❌ Incorrect password. Try again.</div>
   </section>
 
-  <!-- Chat UI (hidden until unlocked) -->
+  <!-- CHAT UI (completely hidden until unlocked) -->
   <div id="wrap" class="hidden">
     <div id="chat"></div>
     <footer>
@@ -164,7 +166,7 @@
     const input = document.getElementById("prompt");
     let messages = JSON.parse(localStorage.getItem("advancedai_msgs")) || [];
 
-    // Password unlock (last 6 must be 444212)
+    // Unlock: only show chat after correct password (last 6 = 444212)
     function unlockAI() {
       const v = (document.getElementById('aiPass').value || '').trim();
       const lastSix = v.slice(-6);
@@ -202,18 +204,16 @@
       chat.scrollTop = chat.scrollHeight;
     }
 
-    // Send message to GPT-4 backend (unchanged)
+    // Send message to backend (unchanged)
     async function sendMessage() {
       const prompt = input.value.trim();
       if (!prompt) return;
       input.value = "";
 
-      // Add user message
       messages.push({ role: "user", text: prompt });
       if (messages.length > 20) messages.shift();
       renderMessages();
 
-      // Fetch AI reply
       const res = await fetch("/api/generate-advanced", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -244,6 +244,7 @@
       }
     }
 
+    // We can render messages now; container stays hidden until unlocked.
     renderMessages();
   </script>
 </body>
