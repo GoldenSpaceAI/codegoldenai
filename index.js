@@ -1,5 +1,4 @@
-// index.js — CodeGoldenAI backend
-
+// index.js — CodeGoldenAI Backend
 import express from "express";
 import session from "express-session";
 import passport from "passport";
@@ -7,162 +6,191 @@ import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
-import OpenAI from "openai";
 
 dotenv.config();
 const app = express();
+const PORT = process.env.PORT || 3000;
+
+// Utils
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Middleware
 app.use(express.json());
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-
-// Session
-app.use(session({
-  secret: process.env.SESSION_SECRET || "supersecret",
-  resave: false,
-  saveUninitialized: false
-}));
+app.use(express.urlencoded({ extended: true }));
+app.use(
+  session({
+    secret: process.env.SESSION_SECRET || "supersecret",
+    resave: false,
+    saveUninitialized: false,
+  })
+);
 app.use(passport.initialize());
 app.use(passport.session());
 
-// User DB (temporary in memory)
-const users = {}; 
-const requests = []; // upgrade requests
+// Passport Google Strategy
+passport.use(
+  new GoogleStrategy(
+    {
+      clientID: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      callbackURL: process.env.CALLBACK_URL || "http://localhost:3000/auth/google/callback",
+    },
+    (accessToken, refreshToken, profile, done) => {
+      const user = {
+        id: profile.id,
+        email: profile.emails[0].value,
+        name: profile.displayName,
+        picture: profile.photos[0].value,
+      };
+      return done(null, user);
+    }
+  )
+);
 
-// Passport Google
-passport.use(new GoogleStrategy({
-  clientID: process.env.GOOGLE_CLIENT_ID,
-  clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-  callbackURL: process.env.GOOGLE_REDIRECT_URI || "https://codegoldenai.onrender.com/auth/google/callback"
-}, (accessToken, refreshToken, profile, done) => {
-  const email = profile.emails[0].value;
-  if (!users[email]) {
-    users[email] = { email, plan: "free", expiry: null };
+passport.serializeUser((user, done) => done(null, user));
+passport.deserializeUser((obj, done) => done(null, obj));
+
+// In-memory storage
+let users = {}; // { email: { plan, expiry } }
+let upgradeRequests = []; // pending upgrade requests
+
+// Serve static pages
+app.use(express.static(path.join(__dirname)));
+
+// Redirect root to login.html
+app.get("/", (req, res) => {
+  if (!req.user) {
+    return res.sendFile(path.join(__dirname, "login.html"));
   }
-  return done(null, users[email]);
-}));
-passport.serializeUser((user, done) => done(null, user.email));
-passport.deserializeUser((email, done) => done(null, users[email]));
+  res.redirect("/index.html");
+});
 
-// Google login routes
-app.get("/auth/google",
-  passport.authenticate("google", { scope: ["profile", "email"] })
-);
-app.get("/auth/google/callback",
+// Google OAuth routes
+app.get("/auth/google", passport.authenticate("google", { scope: ["profile", "email"] }));
+
+app.get(
+  "/auth/google/callback",
   passport.authenticate("google", { failureRedirect: "/login.html" }),
-  (req, res) => { res.redirect("/index.html"); }
+  (req, res) => {
+    const email = req.user.email;
+
+    // If user doesn't exist, assign Free plan
+    if (!users[email]) {
+      users[email] = { plan: "free", expiry: null };
+    }
+    res.redirect("/index.html");
+  }
 );
 
-// Middleware for auth
-function ensureAuth(req, res, next) {
-  if (req.isAuthenticated()) return next();
-  return res.redirect("/login.html");
-}
+app.get("/logout", (req, res) => {
+  req.logout(() => {
+    res.redirect("/login.html");
+  });
+});
 
-// Middleware to enforce plan
-function checkAccess(page) {
+// API: Current user
+app.get("/api/me", (req, res) => {
+  if (!req.user) return res.json({ loggedIn: false });
+  const { email, name, picture } = req.user;
+  const { plan, expiry } = users[email] || { plan: "free", expiry: null };
+  res.json({ loggedIn: true, email, name, picture, plan, expiry });
+});
+
+// API: Request plan upgrade
+app.post("/api/upgrade", (req, res) => {
+  if (!req.user) return res.status(401).json({ error: "Not logged in" });
+
+  const { plan } = req.body;
+  if (!["plus", "pro"].includes(plan)) return res.status(400).json({ error: "Invalid plan" });
+
+  upgradeRequests.push({
+    email: req.user.email,
+    requestedPlan: plan,
+    requestedOn: new Date(),
+    status: "pending",
+  });
+
+  res.json({ success: true });
+});
+
+// Admin panel auth (password-based)
+app.post("/api/admin/login", (req, res) => {
+  const { password } = req.body;
+  if (password === process.env.URL_PASS) {
+    req.session.isAdmin = true;
+    return res.json({ success: true });
+  }
+  res.status(403).json({ error: "Invalid password" });
+});
+
+// Admin panel: Get pending requests
+app.get("/api/admin/requests", (req, res) => {
+  if (!req.session.isAdmin) return res.status(403).json({ error: "Forbidden" });
+  res.json(upgradeRequests);
+});
+
+// Admin panel: Approve request
+app.post("/api/admin/approve", (req, res) => {
+  if (!req.session.isAdmin) return res.status(403).json({ error: "Forbidden" });
+  const { email } = req.body;
+  const request = upgradeRequests.find(r => r.email === email && r.status === "pending");
+  if (!request) return res.status(404).json({ error: "Request not found" });
+
+  const duration = 30 * 24 * 60 * 60 * 1000; // 30 days
+  users[email] = {
+    plan: request.requestedPlan,
+    expiry: Date.now() + duration,
+  };
+
+  request.status = "approved";
+  res.json({ success: true });
+});
+
+// Admin panel: Decline request
+app.post("/api/admin/decline", (req, res) => {
+  if (!req.session.isAdmin) return res.status(403).json({ error: "Forbidden" });
+  const { email } = req.body;
+  const request = upgradeRequests.find(r => r.email === email && r.status === "pending");
+  if (!request) return res.status(404).json({ error: "Request not found" });
+
+  request.status = "declined";
+  res.json({ success: true });
+});
+
+// Middleware: check access
+function requirePlan(requiredPlan) {
   return (req, res, next) => {
-    if (!req.isAuthenticated()) return res.redirect("/login.html");
+    if (!req.user) return res.redirect("/login.html");
+    const { email } = req.user;
+    const user = users[email] || { plan: "free", expiry: null };
 
-    const user = users[req.user.email];
-    const now = new Date();
-
-    if (user.expiry && now > new Date(user.expiry)) {
+    // Expire if needed
+    if (user.expiry && Date.now() > user.expiry) {
       user.plan = "free";
       user.expiry = null;
     }
 
-    if (page === "advancedai" && user.plan === "free")
-      return res.status(403).send("Upgrade required");
-    if (page === "engineer" && user.plan !== "pro")
-      return res.status(403).send("Pro required");
-
+    // Check plan
+    if (requiredPlan === "plus") {
+      if (user.plan === "free") return res.send("⚠️ Upgrade to Plus or Pro to unlock this page.");
+    }
+    if (requiredPlan === "pro") {
+      if (user.plan !== "pro") return res.send("⚠️ Upgrade to Pro to access this page.");
+    }
     next();
   };
 }
 
-// Static files
-app.use(express.static(__dirname));
-
-// Routes with plan checks
-app.get("/playground.html", ensureAuth, (req, res) => {
-  res.sendFile(path.join(__dirname, "playground.html"));
-});
-app.get("/advancedai.html", ensureAuth, checkAccess("advancedai"), (req, res) => {
+// Protect advancedai.html → Plus or Pro only
+app.get("/advancedai.html", requirePlan("plus"), (req, res) => {
   res.sendFile(path.join(__dirname, "advancedai.html"));
 });
-app.get("/engineer.html", ensureAuth, checkAccess("engineer"), (req, res) => {
+
+// Protect engineer.html → Pro only
+app.get("/engineer.html", requirePlan("pro"), (req, res) => {
   res.sendFile(path.join(__dirname, "engineer.html"));
 });
 
-// --- Admin unlock ---
-app.post("/api/admin/unlock", (req, res) => {
-  const { password } = req.body;
-  if (password === process.env.URL_PASS) {
-    req.session.admin = true;
-    return res.sendStatus(200);
-  }
-  res.status(403).json({ error: "Wrong password" });
-});
-
-app.get("/api/admin/requests", (req, res) => {
-  if (!req.session.admin) return res.status(403).json({ error: "Unauthorized" });
-  res.json(requests);
-});
-
-app.post("/api/admin/approve", (req, res) => {
-  if (!req.session.admin) return res.status(403).json({ error: "Unauthorized" });
-  const { email, plan } = req.body;
-  if (users[email]) {
-    users[email].plan = plan;
-    users[email].expiry = new Date(Date.now() + 30*24*60*60*1000); // 30 days
-  }
-  res.sendStatus(200);
-});
-
-app.post("/api/admin/decline", (req, res) => {
-  if (!req.session.admin) return res.status(403).json({ error: "Unauthorized" });
-  const { email } = req.body;
-  res.sendStatus(200);
-});
-
-// Upgrade request (from plans.html)
-app.post("/api/upgrade", ensureAuth, (req, res) => {
-  const { plan } = req.body;
-  requests.push({ email: req.user.email, plan, date: new Date(), status: "pending" });
-  res.sendStatus(200);
-});
-
-// --- AI Endpoints ---
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
-app.post("/api/ask-playground", ensureAuth, async (req, res) => {
-  const { prompt } = req.body;
-  try {
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [{ role: "user", content: prompt }]
-    });
-    res.json({ reply: response.choices[0].message.content });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "OpenAI request failed" });
-  }
-});
-
-app.post("/api/ask-advanced", ensureAuth, checkAccess("advancedai"), async (req, res) => {
-  const { prompt } = req.body;
-  try {
-    const response = await openai.chat.completions.create({
-      model: "gpt-4",
-      messages: [{ role: "user", content: prompt }]
-    });
-    res.json({ reply: response.choices[0].message.content });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "OpenAI request failed" });
-  }
-});
-
-// Start
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log("✅ Server running on port " + PORT));
+// Start server
+app.listen(PORT, () => console.log(`🚀 Server running on http://localhost:${PORT}`));
