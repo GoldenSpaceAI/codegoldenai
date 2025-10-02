@@ -86,10 +86,10 @@
       cursor: pointer;
     }
 
+    /* Chat is hidden by default */
     #chat-container {
-      display: none; /* hidden until unlocked */
+      display: none;
       flex: 1;
-      display: flex;
       flex-direction: column;
     }
 
@@ -179,7 +179,7 @@
       const val = document.getElementById("unlock-input").value.trim();
       if (val.slice(-6) === "444212") {
         unlockContainer.style.display = "none";
-        chatContainer.style.display = "flex";
+        chatContainer.style.display = "flex"; // show chat only after correct password
       } else {
         document.getElementById("unlock-error").style.display = "block";
       }
@@ -224,13 +224,8 @@
 
     function toggleTheme() {
       const body = document.body;
-      if (body.classList.contains("dark")) {
-        body.classList.remove("dark");
-        body.classList.add("light");
-      } else {
-        body.classList.remove("light");
-        body.classList.add("dark");
-      }
+      body.classList.toggle("dark");
+      body.classList.toggle("light");
     }
 
     renderMessages();
