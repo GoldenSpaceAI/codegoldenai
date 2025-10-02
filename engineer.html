@@ -36,8 +36,16 @@
       -webkit-text-fill-color: transparent;
     }
     p {
-      margin-bottom: 2rem;
+      margin-bottom: 1.5rem;
       color: #444;
+    }
+    input[type="password"] {
+      padding: 0.7rem;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 1rem;
+      width: 70%;
+      margin-bottom: 1rem;
     }
     .btn {
       display: inline-block;
@@ -49,22 +57,58 @@
       font-size: 1rem;
       cursor: pointer;
       text-decoration: none;
+      border: none;
     }
     .btn:hover { opacity: 0.9; }
+    .hidden {
+      display: none;
+    }
+    .error {
+      margin-top: 0.5rem;
+      color: red;
+      font-weight: bold;
+    }
   </style>
 </head>
 <body>
   <header>👨‍💻 Hire Engineer</header>
   <main>
-    <h2>Describe Your Project</h2>
-    <p>
-      Whether it’s AI, Education, or a Simple Website — tell us about your project.  
-      Click below to send your request. Attach details and we’ll get back to you.  
-    </p>
+    <!-- Password Gate -->
+    <div id="lock-screen">
+      <h2>🔒 Enter Password</h2>
+      <p>Please enter your password to unlock this feature.<br>
+      If you don’t have a password, please upgrade your plan to get one.</p>
+      <input type="password" id="passwordInput" placeholder="Enter password here">
+      <br>
+      <button class="btn" onclick="checkPassword()">Unlock</button>
+      <div id="errorMsg" class="error hidden">❌ Incorrect password. Try again.</div>
+    </div>
 
-    <a class="btn" href="mailto:goldenspaceais@gmail.com?subject=Engineer%20Request&body=Hello,%20I%20would%20like%20to%20hire%20an%20engineer%20for%20my%20project.%0A%0AType:%20(AI/Education/Simple%20Website)%0ADescription:%20(please%20write%20here)">
-      📩 Contact Engineer
-    </a>
+    <!-- Hidden Contact Form -->
+    <div id="unlocked-content" class="hidden">
+      <h2>Describe Your Project</h2>
+      <p>
+        Whether it’s AI, Education, or a Simple Website — tell us about your project.  
+        Click below to send your request. Attach details and we’ll get back to you.  
+      </p>
+      <a class="btn" href="mailto:goldenspaceais@gmail.com?subject=Engineer%20Request&body=Hello,%20I%20would%20like%20to%20hire%20an%20engineer%20for%20my%20project.%0A%0AType:%20(AI/Education/Simple%20Website)%0ADescription:%20(please%20write%20here)">
+        📩 Contact Engineer
+      </a>
+    </div>
   </main>
+
+  <script>
+    function checkPassword() {
+      const input = document.getElementById("passwordInput").value.trim();
+      const lastSix = input.slice(-6);
+
+      if (lastSix === "666555") {
+        document.getElementById("lock-screen").classList.add("hidden");
+        document.getElementById("unlocked-content").classList.remove("hidden");
+      } else {
+        document.getElementById("errorMsg").classList.remove("hidden");
+      }
+    }
+  </script>
 </body>
 </html>
