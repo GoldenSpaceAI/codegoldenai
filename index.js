@@ -1,198 +1,168 @@
-// index.js — CodeGoldenAI backend (fixed access control)
+// index.js — CodeGoldenAI backend
 
 import express from "express";
 import session from "express-session";
-import dotenv from "dotenv";
-import cors from "cors";
 import passport from "passport";
 import { Strategy as GoogleStrategy } from "passport-google-oauth20";
+import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
-import { OpenAI } from "openai";
+import OpenAI from "openai";
 
 dotenv.config();
-
 const app = express();
-const PORT = process.env.PORT || 3000;
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// ---- Middleware ----
-app.use(cors());
 app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(
-  session({
-    secret: process.env.SESSION_SECRET || "supersecret",
-    resave: false,
-    saveUninitialized: false,
-  })
-);
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+// Session
+app.use(session({
+  secret: process.env.SESSION_SECRET || "supersecret",
+  resave: false,
+  saveUninitialized: false
+}));
 app.use(passport.initialize());
 app.use(passport.session());
 
-// ---- Passport Setup ----
-passport.use(
-  new GoogleStrategy(
-    {
-      clientID: process.env.GOOGLE_CLIENT_ID,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      callbackURL: "https://codegoldenai.onrender.com/auth/google/callback",
-    },
-    (accessToken, refreshToken, profile, done) => {
-      return done(null, {
-        email: profile.emails[0].value,
-        name: profile.displayName,
-        picture: profile.photos[0].value,
-      });
-    }
-  )
+// User DB (temporary in memory)
+const users = {}; 
+const requests = []; // upgrade requests
+
+// Passport Google
+passport.use(new GoogleStrategy({
+  clientID: process.env.GOOGLE_CLIENT_ID,
+  clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+  callbackURL: process.env.GOOGLE_REDIRECT_URI || "https://codegoldenai.onrender.com/auth/google/callback"
+}, (accessToken, refreshToken, profile, done) => {
+  const email = profile.emails[0].value;
+  if (!users[email]) {
+    users[email] = { email, plan: "free", expiry: null };
+  }
+  return done(null, users[email]);
+}));
+passport.serializeUser((user, done) => done(null, user.email));
+passport.deserializeUser((email, done) => done(null, users[email]));
+
+// Google login routes
+app.get("/auth/google",
+  passport.authenticate("google", { scope: ["profile", "email"] })
+);
+app.get("/auth/google/callback",
+  passport.authenticate("google", { failureRedirect: "/login.html" }),
+  (req, res) => { res.redirect("/plans.html"); }
 );
 
-passport.serializeUser((user, done) => done(null, user));
-passport.deserializeUser((user, done) => done(null, user));
-
-// ---- OpenAI ----
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
-// ---- Memory ----
-let upgradeRequests = []; // { email, plan }
-let activePlans = {}; // { email: { plan, expiresAt } }
-
-// ---- Middleware: Auth Guard ----
-function ensureLogin(req, res, next) {
-  if (!req.user) return res.redirect("/login.html");
-  next();
+// Middleware for auth
+function ensureAuth(req, res, next) {
+  if (req.isAuthenticated()) return next();
+  return res.redirect("/login.html");
 }
-function ensurePlan(requiredPlan) {
+
+// Middleware to enforce plan
+function checkAccess(page) {
   return (req, res, next) => {
-    if (!req.user) return res.redirect("/login.html");
+    if (!req.isAuthenticated()) return res.redirect("/login.html");
 
-    const planData = activePlans[req.user.email] || { plan: "Free" };
-    const plan = planData.plan;
+    const user = users[req.user.email];
+    const now = new Date();
 
-    const order = { Free: 0, Plus: 1, Pro: 2 };
-    if (order[plan] < order[requiredPlan]) {
-      return res.redirect("/plans.html");
+    if (user.expiry && now > new Date(user.expiry)) {
+      user.plan = "free";
+      user.expiry = null;
     }
+
+    if (page === "advancedai" && user.plan === "free")
+      return res.status(403).send("Upgrade required");
+    if (page === "engineer" && user.plan !== "pro")
+      return res.status(403).send("Pro required");
+
     next();
   };
 }
 
-// ---- Auth Routes ----
-app.get("/auth/google", passport.authenticate("google", { scope: ["profile", "email"] }));
+// Static files
+app.use(express.static(__dirname));
 
-app.get(
-  "/auth/google/callback",
-  passport.authenticate("google", { failureRedirect: "/login.html" }),
-  (req, res) => {
-    res.redirect("/index.html");
+// Routes with plan checks
+app.get("/playground.html", ensureAuth, (req, res) => {
+  res.sendFile(path.join(__dirname, "playground.html"));
+});
+app.get("/advancedai.html", ensureAuth, checkAccess("advancedai"), (req, res) => {
+  res.sendFile(path.join(__dirname, "advancedai.html"));
+});
+app.get("/engineer.html", ensureAuth, checkAccess("engineer"), (req, res) => {
+  res.sendFile(path.join(__dirname, "engineer.html"));
+});
+
+// --- Admin unlock ---
+app.post("/api/admin/unlock", (req, res) => {
+  const { password } = req.body;
+  if (password === process.env.URL_PASS) {
+    req.session.admin = true;
+    return res.sendStatus(200);
   }
-);
-
-app.get("/logout", (req, res) => {
-  req.logout(() => {
-    res.redirect("/login.html");
-  });
+  res.status(403).json({ error: "Wrong password" });
 });
 
-// ---- API: Me ----
-app.get("/api/me", (req, res) => {
-  if (!req.user) return res.json({ loggedIn: false });
-  const planData = activePlans[req.user.email] || { plan: "Free" };
-  res.json({
-    loggedIn: true,
-    email: req.user.email,
-    name: req.user.name,
-    picture: req.user.picture,
-    plan: planData.plan,
-  });
-});
-
-// ---- API: Plan Proof ----
-app.post("/api/send-plan-proof", (req, res) => {
-  if (!req.user) return res.status(403).json({ error: "Not logged in" });
-  const { plan } = req.body;
-  if (!plan) return res.status(400).json({ error: "Plan required" });
-
-  upgradeRequests.push({ email: req.user.email, plan });
-  res.json({ success: true });
-});
-
-// ---- Admin API ----
 app.get("/api/admin/requests", (req, res) => {
-  if (!req.user || req.user.email !== process.env.ADMIN_EMAIL) {
-    return res.status(403).json({ error: "Unauthorized" });
-  }
-  res.json(upgradeRequests);
+  if (!req.session.admin) return res.status(403).json({ error: "Unauthorized" });
+  res.json(requests);
 });
 
 app.post("/api/admin/approve", (req, res) => {
-  if (!req.user || req.user.email !== process.env.ADMIN_EMAIL) {
-    return res.status(403).json({ error: "Unauthorized" });
-  }
+  if (!req.session.admin) return res.status(403).json({ error: "Unauthorized" });
   const { email, plan } = req.body;
-  const expiresAt = Date.now() + 30 * 24 * 60 * 60 * 1000;
-  activePlans[email] = { plan, expiresAt };
-  upgradeRequests = upgradeRequests.filter((r) => r.email !== email);
-  res.json({ success: true });
+  if (users[email]) {
+    users[email].plan = plan;
+    users[email].expiry = new Date(Date.now() + 30*24*60*60*1000); // 30 days
+  }
+  res.sendStatus(200);
 });
 
 app.post("/api/admin/decline", (req, res) => {
-  if (!req.user || req.user.email !== process.env.ADMIN_EMAIL) {
-    return res.status(403).json({ error: "Unauthorized" });
-  }
+  if (!req.session.admin) return res.status(403).json({ error: "Unauthorized" });
   const { email } = req.body;
-  upgradeRequests = upgradeRequests.filter((r) => r.email !== email);
-  res.json({ success: true });
+  res.sendStatus(200);
 });
 
-// ---- AI Endpoints ----
-app.post("/api/playground", ensureLogin, ensurePlan("Plus"), async (req, res) => {
-  const { message } = req.body;
+// Upgrade request (from plans.html)
+app.post("/api/upgrade", ensureAuth, (req, res) => {
+  const { plan } = req.body;
+  requests.push({ email: req.user.email, plan, date: new Date(), status: "pending" });
+  res.sendStatus(200);
+});
+
+// --- AI Endpoints ---
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+app.post("/api/ask-playground", ensureAuth, async (req, res) => {
+  const { prompt } = req.body;
   try {
-    const completion = await openai.chat.completions.create({
+    const response = await openai.chat.completions.create({
       model: "gpt-4o-mini",
-      messages: [{ role: "user", content: message }],
+      messages: [{ role: "user", content: prompt }]
     });
-    res.json({ reply: completion.choices[0].message.content });
+    res.json({ reply: response.choices[0].message.content });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "AI error" });
+    res.status(500).json({ error: "OpenAI request failed" });
   }
 });
 
-app.post("/api/advancedai", ensureLogin, ensurePlan("Pro"), async (req, res) => {
-  const { message } = req.body;
+app.post("/api/ask-advanced", ensureAuth, checkAccess("advancedai"), async (req, res) => {
+  const { prompt } = req.body;
   try {
-    const completion = await openai.chat.completions.create({
+    const response = await openai.chat.completions.create({
       model: "gpt-4",
-      messages: [{ role: "user", content: message }],
+      messages: [{ role: "user", content: prompt }]
     });
-    res.json({ reply: completion.choices[0].message.content });
+    res.json({ reply: response.choices[0].message.content });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "AI error" });
+    res.status(500).json({ error: "OpenAI request failed" });
   }
 });
 
-// ---- Static Pages with Restrictions ----
-app.use("/index.html", ensureLogin, express.static(__dirname));
-app.use("/plans.html", ensureLogin, express.static(__dirname));
-app.use("/playground.html", ensureLogin, ensurePlan("Plus"), express.static(__dirname));
-app.use("/advancedai.html", ensureLogin, ensurePlan("Pro"), express.static(__dirname));
-app.use("/engineer.html", ensureLogin, ensurePlan("Pro"), express.static(__dirname));
-app.use("/admin.html", ensureLogin, express.static(__dirname));
-
-// ---- Default route goes to login ----
-app.get("/", (req, res) => {
-  res.redirect("/login.html");
-});
-
-// ---- Static (for login and assets) ----
-app.use(express.static(path.join(__dirname)));
-
-app.listen(PORT, () => {
-  console.log(`🚀 Running on http://localhost:${PORT}`);
-});
+// Start
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log("✅ Server running on port " + PORT));
