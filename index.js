@@ -1,57 +1,73 @@
-// index.js — CodeGoldenAI
+// index.js — CodeGoldenAI Server
 import express from "express";
 import session from "express-session";
 import passport from "passport";
-import GoogleStrategy from "passport-google-oauth20";
+import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
-import bodyParser from "body-parser";
+import OpenAI from "openai";
 
 dotenv.config();
-const app = express();
-const PORT = process.env.PORT || 3000;
 
-// Fix dirname in ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Middleware
-app.use(bodyParser.json());
-app.use(express.static(path.join(__dirname, "public")));
-app.use(
-  session({
-    secret: process.env.SESSION_SECRET || "supersecret",
-    resave: false,
-    saveUninitialized: false,
-  })
-);
+const app = express();
+const PORT = process.env.PORT || 3000;
 
-// Passport setup
+// --- SESSION ---
+app.use(session({
+  secret: process.env.SESSION_SECRET || "supersecret",
+  resave: false,
+  saveUninitialized: false
+}));
+
 app.use(passport.initialize());
 app.use(passport.session());
+app.use(express.json());
 
-passport.use(
-  new GoogleStrategy.Strategy(
-    {
-      clientID: process.env.GOOGLE_CLIENT_ID,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      callbackURL: "/auth/google/callback",
-    },
-    (accessToken, refreshToken, profile, done) => {
-      return done(null, { email: profile.emails[0].value });
-    }
-  )
-);
+// --- GOOGLE AUTH ---
+passport.use(new GoogleStrategy({
+  clientID: process.env.GOOGLE_CLIENT_ID,
+  clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+  callbackURL: "/auth/google/callback"
+}, (accessToken, refreshToken, profile, done) => {
+  return done(null, { id: profile.id, email: profile.emails[0].value });
+}));
 
 passport.serializeUser((user, done) => done(null, user));
 passport.deserializeUser((obj, done) => done(null, obj));
 
-// --- Auth Routes ---
-app.get("/auth/google", passport.authenticate("google", { scope: ["email"] }));
+// --- ROUTES ---
+// First page = login
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "login.html"));
+});
 
-app.get(
-  "/auth/google/callback",
+// Main pages (require login)
+app.get("/index.html", ensureAuth, (req, res) => {
+  res.sendFile(path.join(__dirname, "index.html"));
+});
+app.get("/plans.html", ensureAuth, (req, res) => {
+  res.sendFile(path.join(__dirname, "plans.html"));
+});
+app.get("/playground.html", ensureAuth, (req, res) => {
+  res.sendFile(path.join(__dirname, "playground.html"));
+});
+app.get("/advancedai.html", ensureAuth, (req, res) => {
+  res.sendFile(path.join(__dirname, "advancedai.html"));
+});
+app.get("/engineer.html", ensureAuth, (req, res) => {
+  res.sendFile(path.join(__dirname, "engineer.html"));
+});
+
+// --- GOOGLE LOGIN ---
+app.get("/auth/google",
+  passport.authenticate("google", { scope: ["profile", "email"] })
+);
+
+app.get("/auth/google/callback",
   passport.authenticate("google", { failureRedirect: "/login.html" }),
   (req, res) => {
     res.redirect("/index.html");
@@ -59,59 +75,52 @@ app.get(
 );
 
 app.get("/logout", (req, res) => {
-  req.logout(() => res.redirect("/login.html"));
+  req.logout(() => res.redirect("/"));
 });
 
-// --- Protect pages ---
-function ensureLogin(req, res, next) {
-  if (req.isAuthenticated()) return next();
-  res.redirect("/login.html");
-}
+// --- OPENAI CLIENT ---
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-// Always show login first
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "public/login.html"));
-});
-
-app.get("/index.html", ensureLogin, (req, res) => {
-  res.sendFile(path.join(__dirname, "public/index.html"));
-});
-
-app.get("/plans.html", ensureLogin, (req, res) => {
-  res.sendFile(path.join(__dirname, "public/plans.html"));
-});
-
-app.get("/engineer.html", ensureLogin, (req, res) => {
-  res.sendFile(path.join(__dirname, "public/engineer.html"));
-});
-
-app.get("/advancedai.html", ensureLogin, (req, res) => {
-  res.sendFile(path.join(__dirname, "public/advancedai.html"));
-});
-
-// --- AdvancedAI API ---
-import OpenAI from "openai";
-const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
-app.post("/api/generate-advanced", async (req, res) => {
+// Playground → GPT-4o-mini
+app.post("/api/generate-playground", async (req, res) => {
   try {
     const { prompt } = req.body;
-    if (!prompt) return res.status(400).json({ text: "No prompt provided" });
-
-    const completion = await client.chat.completions.create({
+    const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
-      messages: [{ role: "user", content: prompt }],
+      messages: [{ role: "user", content: prompt }]
     });
-
-    const reply = completion.choices[0].message.content;
-    res.json({ text: reply });
+    res.json({ text: completion.choices[0].message.content });
   } catch (err) {
-    console.error("AI error:", err);
-    res.status(500).json({ text: "⚠️ Error generating response." });
+    console.error("Playground error:", err.message);
+    res.status(500).json({ text: "⚠️ Playground error generating response." });
   }
 });
 
-// --- Start server ---
+// AdvancedAI → GPT-4
+app.post("/api/generate-advanced", async (req, res) => {
+  try {
+    const { prompt } = req.body;
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4",
+      messages: [{ role: "user", content: prompt }]
+    });
+    res.json({ text: completion.choices[0].message.content });
+  } catch (err) {
+    console.error("AdvancedAI error:", err.message);
+    res.status(500).json({ text: "⚠️ AdvancedAI error generating response." });
+  }
+});
+
+// --- STATIC FILES ---
+app.use(express.static(__dirname));
+
+// --- AUTH MIDDLEWARE ---
+function ensureAuth(req, res, next) {
+  if (req.isAuthenticated()) return next();
+  res.redirect("/");
+}
+
+// --- START SERVER ---
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
+  console.log(`🚀 Server running at http://localhost:${PORT}`);
 });
