@@ -13,6 +13,7 @@
       display: flex;
       flex-direction: column;
       height: 100vh;
+      overflow: hidden; /* prevent scroll while locked */
     }
 
     /* THEMES (unchanged) */
@@ -37,7 +38,7 @@
       inset: 0;
       background: var(--overlay);
       backdrop-filter: blur(4px);
-      z-index: -1;
+      z-index: -2;
     }
 
     header {
@@ -51,6 +52,7 @@
     }
 
     /* Chat UI (unchanged) */
+    #wrap { display:flex; flex-direction:column; height:100%; }
     #chat {
       flex: 1;
       overflow-y: auto;
@@ -109,11 +111,20 @@
     }
     .theme-toggle { margin-left: 0.5rem; background: #444; }
 
-    /* Password gate */
-    .hidden { display: none; }
+    /* FULL-SCREEN PASSWORD OVERLAY */
+    #lockOverlay {
+      position: fixed;
+      inset: 0;
+      z-index: 10;               /* sits above everything */
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+      background: transparent;   /* blur already applied on body::before */
+    }
     #gate {
+      width: 100%;
       max-width: 720px;
-      margin: 2rem auto;
       background: var(--card);
       padding: 1.2rem 1.2rem 1.6rem;
       border-radius: 12px;
@@ -132,53 +143,78 @@
     }
     #gate .err { color: #ff6b6b; font-weight: 600; margin-top: .6rem; display:none; }
 
-    /* Wrap the entire chat UI so it's fully hidden before unlock */
-    #wrap { display:flex; flex-direction:column; height:100%; }
+    /* Hide helpers */
+    .hidden { display: none; }
   </style>
 </head>
 <body class="dark">
   <header>⚡ AdvancedAI • Powered by GPT-4</header>
 
-  <!-- PASSWORD GATE (shown first) -->
-  <section id="gate">
-    <h3>🔒 Enter Password to Unlock AdvancedAI</h3>
-    <p>Please enter your password to unlock this feature.<br>
-      If you don’t have a password, please upgrade your plan to get one.</p>
-    <input id="aiPass" type="password" placeholder="Enter password here" />
-    <div style="margin-top:.6rem;">
-      <button onclick="unlockAI()">Unlock</button>
-    </div>
-    <div id="gateErr" class="err">❌ Incorrect password. Try again.</div>
-  </section>
+  <!-- FULL-SCREEN PASSWORD OVERLAY (shown first, blocks page) -->
+  <div id="lockOverlay">
+    <section id="gate">
+      <h3>🔒 Enter Password to Unlock AdvancedAI</h3>
+      <p>Please enter your password to unlock this feature.<br>
+        If you don’t have a password, please upgrade your plan to get one.</p>
+      <input id="aiPass" type="password" placeholder="Enter password here" />
+      <div style="margin-top:.6rem;">
+        <button id="unlockBtn">Unlock</button>
+      </div>
+      <div id="gateErr" class="err">❌ Incorrect password. Try again.</div>
+    </section>
+  </div>
 
-  <!-- CHAT UI (completely hidden until unlocked) -->
-  <div id="wrap" class="hidden">
+  <!-- CHAT UI (exists but is covered until unlocked) -->
+  <div id="wrap">
     <div id="chat"></div>
     <footer>
       <input id="prompt" placeholder="Ask AdvancedAI anything..." />
-      <button onclick="sendMessage()">Send</button>
-      <button class="theme-toggle" onclick="toggleTheme()">🌓</button>
+      <button id="sendBtn">Send</button>
+      <button class="theme-toggle" id="themeBtn">🌓</button>
     </footer>
   </div>
 
   <script>
     const chat = document.getElementById("chat");
     const input = document.getElementById("prompt");
-    let messages = JSON.parse(localStorage.getItem("advancedai_msgs")) || [];
+    const lockOverlay = document.getElementById("lockOverlay");
+    const gateErr = document.getElementById("gateErr");
+    const unlockBtn = document.getElementById("unlockBtn");
+    const sendBtn = document.getElementById("sendBtn");
+    const themeBtn = document.getElementById("themeBtn");
 
-    // Unlock: only show chat after correct password (last 6 = 444212)
+    let messages = JSON.parse(localStorage.getItem("advancedai_msgs")) || [];
+    let unlocked = false;
+
+    // Prevent sending while locked
+    sendBtn.addEventListener("click", () => {
+      if (!unlocked) return;   // ignore clicks while locked
+      sendMessage();
+    });
+    input.addEventListener("keydown", (e) => {
+      if (!unlocked) return;
+      if (e.key === "Enter") sendMessage();
+    });
+
+    // Unlock flow (last 6 must be 444212)
     function unlockAI() {
       const v = (document.getElementById('aiPass').value || '').trim();
       const lastSix = v.slice(-6);
       if (lastSix === "444212") {
-        document.getElementById('gate').classList.add('hidden');
-        document.getElementById('wrap').classList.remove('hidden');
+        unlocked = true;
+        lockOverlay.classList.add('hidden');  // remove overlay
+        document.body.style.overflow = "auto";
+        renderMessages();                     // now render any saved convo
       } else {
-        document.getElementById('gateErr').style.display = 'block';
+        gateErr.style.display = 'block';
       }
     }
+    unlockBtn.addEventListener("click", unlockAI);
+    document.getElementById("aiPass").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") unlockAI();
+    });
 
-    // Render chat messages (unchanged)
+    // Render chat messages (unchanged logic)
     function renderMessages() {
       chat.innerHTML = "";
       messages.forEach(m => {
@@ -204,7 +240,7 @@
       chat.scrollTop = chat.scrollHeight;
     }
 
-    // Send message to backend (unchanged)
+    // Send message to backend (uses your existing /api/generate-advanced)
     async function sendMessage() {
       const prompt = input.value.trim();
       if (!prompt) return;
@@ -214,19 +250,28 @@
       if (messages.length > 20) messages.shift();
       renderMessages();
 
-      const res = await fetch("/api/generate-advanced", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt }),
-      });
+      try {
+        const res = await fetch("/api/generate-advanced", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ prompt }),
+        });
 
-      if (res.ok) {
+        if (!res.ok) {
+          const err = await res.text().catch(()=> "");
+          messages.push({ role: "ai", text: "⚠️ Error generating response." });
+          renderMessages();
+          console.error("AdvancedAI error:", res.status, err);
+          return;
+        }
+
         const data = await res.json();
         messages.push({ role: "ai", text: data.text, code: data.code });
         if (messages.length > 20) messages.shift();
         localStorage.setItem("advancedai_msgs", JSON.stringify(messages));
         renderMessages();
-      } else {
+      } catch (e) {
+        console.error(e);
         messages.push({ role: "ai", text: "⚠️ Error generating response." });
         renderMessages();
       }
@@ -243,9 +288,10 @@
         body.classList.add("dark");
       }
     }
+    themeBtn.addEventListener("click", toggleTheme);
 
-    // We can render messages now; container stays hidden until unlocked.
-    renderMessages();
+    // IMPORTANT: Do NOT render messages until unlocked
+    // renderMessages();
   </script>
 </body>
 </html>
