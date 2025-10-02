@@ -1,23 +1,24 @@
-// index.js — CodeGoldenAI Backend
+// index.js — CodeGoldenAI
 import express from "express";
 import session from "express-session";
 import passport from "passport";
-import { Strategy as GoogleStrategy } from "passport-google-oauth20";
+import GoogleStrategy from "passport-google-oauth20";
 import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
+import bodyParser from "body-parser";
 
 dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Utils
+// Fix dirname in ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Middleware
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(bodyParser.json());
+app.use(express.static(path.join(__dirname, "public")));
 app.use(
   session({
     secret: process.env.SESSION_SECRET || "supersecret",
@@ -25,27 +26,20 @@ app.use(
     saveUninitialized: false,
   })
 );
+
+// Passport setup
 app.use(passport.initialize());
 app.use(passport.session());
 
-// Passport Google OAuth
 passport.use(
-  new GoogleStrategy(
+  new GoogleStrategy.Strategy(
     {
       clientID: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      callbackURL:
-        process.env.CALLBACK_URL ||
-        "https://codegoldenai.onrender.com/auth/google/callback",
+      callbackURL: "/auth/google/callback",
     },
     (accessToken, refreshToken, profile, done) => {
-      const user = {
-        id: profile.id,
-        email: profile.emails[0].value,
-        name: profile.displayName,
-        picture: profile.photos[0].value,
-      };
-      return done(null, user);
+      return done(null, { email: profile.emails[0].value });
     }
   )
 );
@@ -53,124 +47,71 @@ passport.use(
 passport.serializeUser((user, done) => done(null, user));
 passport.deserializeUser((obj, done) => done(null, obj));
 
-// In-memory storage
-let users = {}; // email → {plan, expiry}
-let upgradeRequests = []; // {email, plan, date, status}
-
-// --- Routes ---
-
-// Redirect root → login page
-app.get("/", (req, res) => {
-  if (!req.user) {
-    return res.sendFile(path.join(__dirname, "login.html"));
-  }
-  res.redirect("/index.html");
-});
-
-// Google login
-app.get(
-  "/auth/google",
-  passport.authenticate("google", { scope: ["profile", "email"] })
-);
+// --- Auth Routes ---
+app.get("/auth/google", passport.authenticate("google", { scope: ["email"] }));
 
 app.get(
   "/auth/google/callback",
   passport.authenticate("google", { failureRedirect: "/login.html" }),
   (req, res) => {
-    const email = req.user.email;
-    if (!users[email]) {
-      users[email] = { plan: "free", expiry: null };
-    }
     res.redirect("/index.html");
   }
 );
 
-// Logout
 app.get("/logout", (req, res) => {
-  req.logout(() => {
-    res.redirect("/login.html");
-  });
+  req.logout(() => res.redirect("/login.html"));
 });
 
-// Current user API
-app.get("/api/me", (req, res) => {
-  if (!req.user) return res.json({ loggedIn: false });
-  const { email, name, picture } = req.user;
-  const { plan, expiry } = users[email] || { plan: "free", expiry: null };
-  res.json({ loggedIn: true, email, name, picture, plan, expiry });
+// --- Protect pages ---
+function ensureLogin(req, res, next) {
+  if (req.isAuthenticated()) return next();
+  res.redirect("/login.html");
+}
+
+// Always show login first
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "public/login.html"));
 });
 
-// User requests upgrade (from plans.html)
-app.post("/api/request-upgrade", (req, res) => {
-  if (!req.user) return res.status(401).json({ error: "Not logged in" });
+app.get("/index.html", ensureLogin, (req, res) => {
+  res.sendFile(path.join(__dirname, "public/index.html"));
+});
 
-  const { plan } = req.body;
-  if (!["plus", "pro"].includes(plan)) {
-    return res.status(400).json({ error: "Invalid plan" });
+app.get("/plans.html", ensureLogin, (req, res) => {
+  res.sendFile(path.join(__dirname, "public/plans.html"));
+});
+
+app.get("/engineer.html", ensureLogin, (req, res) => {
+  res.sendFile(path.join(__dirname, "public/engineer.html"));
+});
+
+app.get("/advancedai.html", ensureLogin, (req, res) => {
+  res.sendFile(path.join(__dirname, "public/advancedai.html"));
+});
+
+// --- AdvancedAI API ---
+import OpenAI from "openai";
+const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+app.post("/api/generate-advanced", async (req, res) => {
+  try {
+    const { prompt } = req.body;
+    if (!prompt) return res.status(400).json({ text: "No prompt provided" });
+
+    const completion = await client.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [{ role: "user", content: prompt }],
+    });
+
+    const reply = completion.choices[0].message.content;
+    res.json({ text: reply });
+  } catch (err) {
+    console.error("AI error:", err);
+    res.status(500).json({ text: "⚠️ Error generating response." });
   }
-
-  upgradeRequests.push({
-    email: req.user.email,
-    plan,
-    date: new Date(),
-    status: "pending",
-  });
-
-  res.json({ success: true });
 });
 
-// --- Admin endpoints ---
-
-// Unlock admin with password
-app.post("/api/admin/unlock", (req, res) => {
-  const { password } = req.body;
-  if (password === process.env.URL_PASS) {
-    req.session.isAdmin = true;
-    return res.sendStatus(200);
-  }
-  res.status(403).json({ error: "Wrong password" });
+// --- Start server ---
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on http://localhost:${PORT}`);
 });
-
-// List all upgrade requests
-app.get("/api/admin/requests", (req, res) => {
-  if (!req.session.isAdmin) return res.status(403).json({ error: "Forbidden" });
-  res.json(upgradeRequests);
-});
-
-// Approve request
-app.post("/api/admin/approve", (req, res) => {
-  if (!req.session.isAdmin) return res.status(403).json({ error: "Forbidden" });
-
-  const { email, plan } = req.body;
-  const request = upgradeRequests.find(
-    (r) => r.email === email && r.status === "pending"
-  );
-  if (!request) return res.status(404).json({ error: "Request not found" });
-
-  users[email] = { plan, expiry: Date.now() + 30 * 24 * 60 * 60 * 1000 };
-  request.status = "approved";
-
-  res.json({ success: true });
-});
-
-// Decline request
-app.post("/api/admin/decline", (req, res) => {
-  if (!req.session.isAdmin) return res.status(403).json({ error: "Forbidden" });
-
-  const { email } = req.body;
-  const request = upgradeRequests.find(
-    (r) => r.email === email && r.status === "pending"
-  );
-  if (!request) return res.status(404).json({ error: "Request not found" });
-
-  request.status = "declined";
-  res.json({ success: true });
-});
-
-// Serve static files (HTML, CSS, JS, images)
-app.use(express.static(__dirname));
-
-// Start server
-app.listen(PORT, () =>
-  console.log(`🚀 Server running at http://localhost:${PORT}`)
-);
