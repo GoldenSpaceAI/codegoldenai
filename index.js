@@ -49,7 +49,7 @@ app.get("/auth/google",
 );
 app.get("/auth/google/callback",
   passport.authenticate("google", { failureRedirect: "/login.html" }),
-  (req, res) => { res.redirect("/plans.html"); }
+  (req, res) => { res.redirect("/index.html"); }
 );
 
 // Middleware for auth
