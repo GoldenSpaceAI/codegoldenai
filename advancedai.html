@@ -15,6 +15,7 @@
       height: 100vh;
     }
 
+    /* THEMES (kept as-is) */
     :root.light {
       --bg: url("https://images.unsplash.com/photo-1581091012184-5c67d6f64a7d?auto=format&fit=crop&w=1920&q=80") no-repeat center/cover;
       --overlay: rgba(255,255,255,0.75);
@@ -49,6 +50,7 @@
       -webkit-text-fill-color: transparent;
     }
 
+    /* Chat UI */
     #chat {
       flex: 1;
       overflow-y: auto;
@@ -73,7 +75,6 @@
       overflow-x: auto;
       margin-top: 0.5rem;
     }
-
     .copy-btn {
       background: #f6c64a;
       border: none;
@@ -106,12 +107,9 @@
       font-weight: bold;
       cursor: pointer;
     }
-    .theme-toggle {
-      margin-left: 0.5rem;
-      background: #444;
-    }
+    .theme-toggle { margin-left: 0.5rem; background: #444; }
 
-    /* Password gate */
+    /* Password gate (same behavior as engineer.html) */
     .hidden { display: none; }
     #gate {
       max-width: 720px;
@@ -151,10 +149,9 @@
     <div id="gateErr" class="err">❌ Incorrect password. Try again.</div>
   </section>
 
-  <!-- Chat wrapper (hidden until unlocked) -->
+  <!-- Chat UI (hidden until unlocked) -->
   <div id="wrap" class="hidden">
     <div id="chat"></div>
-
     <footer>
       <input id="prompt" placeholder="Ask AdvancedAI anything..." />
       <button onclick="sendMessage()">Send</button>
@@ -167,7 +164,7 @@
     const input = document.getElementById("prompt");
     let messages = JSON.parse(localStorage.getItem("advancedai_msgs")) || [];
 
-    // Password unlock
+    // Password unlock (last 6 must be 444212)
     function unlockAI() {
       const v = (document.getElementById('aiPass').value || '').trim();
       const lastSix = v.slice(-6);
@@ -179,7 +176,7 @@
       }
     }
 
-    // Render chat messages
+    // Render chat messages (unchanged)
     function renderMessages() {
       chat.innerHTML = "";
       messages.forEach(m => {
@@ -205,7 +202,7 @@
       chat.scrollTop = chat.scrollHeight;
     }
 
-    // Send message
+    // Send message to GPT-4 backend (unchanged)
     async function sendMessage() {
       const prompt = input.value.trim();
       if (!prompt) return;
@@ -235,7 +232,7 @@
       }
     }
 
-    // Theme toggle
+    // Theme toggle (unchanged)
     function toggleTheme() {
       const body = document.body;
       if (body.classList.contains("dark")) {
