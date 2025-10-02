@@ -1,5 +1,4 @@
-// index.js — GoldenSpaceAI backend (launch-ready)
-
+// index.js — Full backend for CodeGoldenAI
 import express from "express";
 import session from "express-session";
 import passport from "passport";
@@ -10,95 +9,101 @@ import { fileURLToPath } from "url";
 import OpenAI from "openai";
 
 dotenv.config();
-const app = express();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+const app = express();
 const PORT = process.env.PORT || 3000;
 
-// --------- SESSION ----------
-app.use(session({
-  secret: process.env.SESSION_SECRET || "goldensecret",
-  resave: false,
-  saveUninitialized: false
-}));
+// Middleware
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-// --------- PASSPORT ----------
+// Sessions
+app.use(
+  session({
+    secret: process.env.SESSION_SECRET || "supersecret",
+    resave: false,
+    saveUninitialized: false,
+  })
+);
+
+// Passport setup
 app.use(passport.initialize());
 app.use(passport.session());
 
-passport.use(new GoogleStrategy(
-  {
-    clientID: process.env.GOOGLE_CLIENT_ID,
-    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    callbackURL: "https://codegoldenai.onrender.com/auth/google/callback"
-  },
-  (accessToken, refreshToken, profile, done) => {
-    return done(null, profile);
-  }
-));
+passport.use(
+  new GoogleStrategy(
+    {
+      clientID: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      callbackURL: "https://codegoldenai.onrender.com/auth/google/callback",
+    },
+    (accessToken, refreshToken, profile, done) => {
+      return done(null, profile);
+    }
+  )
+);
 
-passport.serializeUser((user, done) => done(null, user));
-passport.deserializeUser((obj, done) => done(null, obj));
+passport.serializeUser((user, done) => {
+  done(null, user);
+});
+passport.deserializeUser((obj, done) => {
+  done(null, obj);
+});
 
-// --------- GOOGLE ROUTES ----------
+// Google login routes
 app.get("/auth/google",
   passport.authenticate("google", { scope: ["profile", "email"] })
 );
 
-app.get("/auth/google/callback",
-  passport.authenticate("google", { failureRedirect: "/login.html" }),
-  (req, res) => res.redirect("/index.html")
+app.get(
+  "/auth/google/callback",
+  passport.authenticate("google", {
+    failureRedirect: "/login.html",
+    successRedirect: "/index.html",
+  })
 );
 
-app.get("/logout", (req, res) => {
-  req.logout(() => {});
-  res.redirect("/login.html");
-});
+// Serve static frontend files
+app.use(express.static(path.join(__dirname)));
 
-// --------- STATIC FILES ----------
-app.use(express.static(path.join(__dirname, "public"))); 
-
-// Redirect root → login first
+// Default route → login.html
 app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "login.html"));
+  res.sendFile(path.join(__dirname, "login.html"));
 });
 
-// --------- OPENAI SETUP ----------
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
-app.use(express.json());
-
-// GPT-4o-mini for Playground
+// API for Playground (GPT-4o-mini)
 app.post("/api/generate-playground", async (req, res) => {
   try {
-    const { prompt } = req.body;
-    const response = await openai.chat.completions.create({
+    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
-      messages: [{ role: "user", content: prompt }]
+      messages: [{ role: "user", content: req.body.prompt }],
     });
-    res.json({ text: response.choices[0].message.content });
+    res.json({ text: completion.choices[0].message.content });
   } catch (err) {
-    console.error("Playground error:", err);
-    res.status(500).json({ text: "⚠️ Error generating response." });
+    console.error(err);
+    res.status(500).json({ error: "Error generating response." });
   }
 });
 
-// GPT-4 for AdvancedAI
+// API for AdvancedAI (GPT-4)
 app.post("/api/generate-advanced", async (req, res) => {
   try {
-    const { prompt } = req.body;
-    const response = await openai.chat.completions.create({
+    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    const completion = await openai.chat.completions.create({
       model: "gpt-4",
-      messages: [{ role: "user", content: prompt }]
+      messages: [{ role: "user", content: req.body.prompt }],
     });
-    res.json({ text: response.choices[0].message.content });
+    res.json({ text: completion.choices[0].message.content });
   } catch (err) {
-    console.error("AdvancedAI error:", err);
-    res.status(500).json({ text: "⚠️ Error generating response." });
+    console.error(err);
+    res.status(500).json({ error: "Error generating response." });
   }
 });
 
-// --------- START ----------
+// Start server
 app.listen(PORT, () => {
   console.log(`🚀 Server running at http://localhost:${PORT}`);
 });
