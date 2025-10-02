@@ -1,4 +1,4 @@
-// index.js — CodeGoldenAI backend
+// index.js — CodeGoldenAI backend (fixed access control)
 
 import express from "express";
 import session from "express-session";
@@ -29,10 +29,10 @@ app.use(
   })
 );
 
-// ---- Passport Setup ----
 app.use(passport.initialize());
 app.use(passport.session());
 
+// ---- Passport Setup ----
 passport.use(
   new GoogleStrategy(
     {
@@ -53,12 +53,32 @@ passport.use(
 passport.serializeUser((user, done) => done(null, user));
 passport.deserializeUser((user, done) => done(null, user));
 
-// ---- OpenAI Setup ----
+// ---- OpenAI ----
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-// ---- Memory (temporary store) ----
+// ---- Memory ----
 let upgradeRequests = []; // { email, plan }
 let activePlans = {}; // { email: { plan, expiresAt } }
+
+// ---- Middleware: Auth Guard ----
+function ensureLogin(req, res, next) {
+  if (!req.user) return res.redirect("/login.html");
+  next();
+}
+function ensurePlan(requiredPlan) {
+  return (req, res, next) => {
+    if (!req.user) return res.redirect("/login.html");
+
+    const planData = activePlans[req.user.email] || { plan: "Free" };
+    const plan = planData.plan;
+
+    const order = { Free: 0, Plus: 1, Pro: 2 };
+    if (order[plan] < order[requiredPlan]) {
+      return res.redirect("/plans.html");
+    }
+    next();
+  };
+}
 
 // ---- Auth Routes ----
 app.get("/auth/google", passport.authenticate("google", { scope: ["profile", "email"] }));
@@ -77,7 +97,7 @@ app.get("/logout", (req, res) => {
   });
 });
 
-// ---- API: User Info ----
+// ---- API: Me ----
 app.get("/api/me", (req, res) => {
   if (!req.user) return res.json({ loggedIn: false });
   const planData = activePlans[req.user.email] || { plan: "Free" };
@@ -113,11 +133,8 @@ app.post("/api/admin/approve", (req, res) => {
     return res.status(403).json({ error: "Unauthorized" });
   }
   const { email, plan } = req.body;
-  if (!email || !plan) return res.status(400).json({ error: "Missing fields" });
-
-  const expiresAt = Date.now() + 30 * 24 * 60 * 60 * 1000; // 30 days
+  const expiresAt = Date.now() + 30 * 24 * 60 * 60 * 1000;
   activePlans[email] = { plan, expiresAt };
-
   upgradeRequests = upgradeRequests.filter((r) => r.email !== email);
   res.json({ success: true });
 });
@@ -132,14 +149,7 @@ app.post("/api/admin/decline", (req, res) => {
 });
 
 // ---- AI Endpoints ----
-app.post("/api/playground", async (req, res) => {
-  if (!req.user) return res.status(403).json({ error: "Not logged in" });
-
-  const planData = activePlans[req.user.email] || { plan: "Free" };
-  if (planData.plan === "Free") {
-    return res.status(403).json({ error: "Upgrade required to use Playground" });
-  }
-
+app.post("/api/playground", ensureLogin, ensurePlan("Plus"), async (req, res) => {
   const { message } = req.body;
   try {
     const completion = await openai.chat.completions.create({
@@ -153,14 +163,7 @@ app.post("/api/playground", async (req, res) => {
   }
 });
 
-app.post("/api/advancedai", async (req, res) => {
-  if (!req.user) return res.status(403).json({ error: "Not logged in" });
-
-  const planData = activePlans[req.user.email] || { plan: "Free" };
-  if (planData.plan !== "Pro") {
-    return res.status(403).json({ error: "Pro plan required" });
-  }
-
+app.post("/api/advancedai", ensureLogin, ensurePlan("Pro"), async (req, res) => {
   const { message } = req.body;
   try {
     const completion = await openai.chat.completions.create({
@@ -174,9 +177,22 @@ app.post("/api/advancedai", async (req, res) => {
   }
 });
 
-// ---- Static Pages ----
+// ---- Static Pages with Restrictions ----
+app.use("/index.html", ensureLogin, express.static(__dirname));
+app.use("/plans.html", ensureLogin, express.static(__dirname));
+app.use("/playground.html", ensureLogin, ensurePlan("Plus"), express.static(__dirname));
+app.use("/advancedai.html", ensureLogin, ensurePlan("Pro"), express.static(__dirname));
+app.use("/engineer.html", ensureLogin, ensurePlan("Pro"), express.static(__dirname));
+app.use("/admin.html", ensureLogin, express.static(__dirname));
+
+// ---- Default route goes to login ----
+app.get("/", (req, res) => {
+  res.redirect("/login.html");
+});
+
+// ---- Static (for login and assets) ----
 app.use(express.static(path.join(__dirname)));
 
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
+  console.log(`🚀 Running on http://localhost:${PORT}`);
 });
