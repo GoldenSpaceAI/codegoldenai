@@ -147,7 +147,7 @@
       const aiMsg = addMessage("⏳ Thinking...", "ai");
 
       try {
-        const res = await fetch("/api/generate-ai", {
+        const res = await fetch("/api/generate-playground", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ prompt: text })
@@ -158,10 +158,9 @@
           aiMsg.textContent = "❌ " + data.error;
         } else {
           aiMsg.innerHTML = `
-            ${data.code.includes("<") ? "Here is your code:" : data.code}
             <div class="code-box">
               <button class="copy-btn" onclick="copyCode(this)">Copy</button>
-              <pre><code>${escapeHtml(data.code)}</code></pre>
+              <pre><code>${escapeHtml(data.text)}</code></pre>
             </div>
           `;
         }
