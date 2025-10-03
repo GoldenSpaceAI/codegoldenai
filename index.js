@@ -1,4 +1,4 @@
-// index.js — Full backend for CodeGoldenAI (ESM)
+// index.js — Full backend for CodeGoldenAI
 import express from "express";
 import session from "express-session";
 import passport from "passport";
@@ -7,21 +7,20 @@ import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
 import OpenAI from "openai";
-import { GoogleGenerativeAI } from "@google/generative-ai"; // Gemini
+import { GoogleGenerativeAI } from "@google/generative-ai";  // Gemini SDK
 
 dotenv.config();
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// ---------- Middleware ----------
+// Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// ---------- Sessions ----------
+// Sessions
 app.use(
   session({
     secret: process.env.SESSION_SECRET || "supersecret",
@@ -30,7 +29,7 @@ app.use(
   })
 );
 
-// ---------- Passport (Google OAuth) ----------
+// Passport setup
 app.use(passport.initialize());
 app.use(passport.session());
 
@@ -41,28 +40,42 @@ passport.use(
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
       callbackURL: "https://codegoldenai.onrender.com/auth/google/callback",
     },
-    (_accessToken, _refreshToken, profile, done) => done(null, profile)
+    (accessToken, refreshToken, profile, done) => {
+      return done(null, profile);
+    }
   )
 );
 
-passport.serializeUser((user, done) => done(null, user));
-passport.deserializeUser((obj, done) => done(null, obj));
+passport.serializeUser((user, done) => {
+  done(null, user);
+});
+passport.deserializeUser((obj, done) => {
+  done(null, obj);
+});
 
-app.get("/auth/google", passport.authenticate("google", { scope: ["profile", "email"] }));
-app.get(
-  "/auth/google/callback",
-  passport.authenticate("google", { failureRedirect: "/login.html", successRedirect: "/index.html" })
+// Google login routes
+app.get("/auth/google",
+  passport.authenticate("google", { scope: ["profile", "email"] })
 );
 
-// ---------- Static files ----------
-app.use(express.static(__dirname));
+app.get(
+  "/auth/google/callback",
+  passport.authenticate("google", {
+    failureRedirect: "/login.html",
+    successRedirect: "/index.html",
+  })
+);
 
-// Default -> login
+// Serve static frontend files
+app.use(express.static(path.join(__dirname)));
+
+// Default route → login.html
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "login.html"));
 });
 
-// ---------- AI ROUTES ----------
+
+// ================== AI ROUTES ==================
 
 // Playground (GPT-4o-mini)
 app.post("/api/generate-playground", async (req, res) => {
@@ -84,7 +97,7 @@ app.post("/api/generate-playground", async (req, res) => {
   }
 });
 
-// Advanced AI (GPT-4)
+// AdvancedAI (GPT-4)
 app.post("/api/generate-advanced", async (req, res) => {
   try {
     const { prompt } = req.body;
@@ -104,13 +117,15 @@ app.post("/api/generate-advanced", async (req, res) => {
   }
 });
 
-// ========== Ultra AI (Gemini 2.5 Pro with 20-message memory) ==========
+// Ultra AI (Gemini 2.5 Pro) with memory of last 20 messages
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+
 app.post("/api/generate-ultra", async (req, res) => {
   try {
     const { messages } = req.body;
 
     if (!messages || !Array.isArray(messages)) {
-      return res.status(400).json({ error: "No messages provided (expected an array)." });
+      return res.status(400).json({ error: "No messages provided (expected array)." });
     }
 
     // Keep only last 20 messages
@@ -130,8 +145,11 @@ app.post("/api/generate-ultra", async (req, res) => {
   } catch (err) {
     console.error("Ultra AI error:", err?.message || err);
     res.status(500).json({ error: "Ultra AI failed: " + (err?.message || "unknown error") });
-  
-});});// ---------- Start ----------
+  }
+});
+
+
+// ================== START SERVER ==================
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`🚀 Server running at http://localhost:${PORT}`);
 });
