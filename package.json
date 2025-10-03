@@ -1,24 +1,25 @@
 {
   "name": "codegoldenai",
   "version": "1.0.0",
-  "description": "AI-powered code and website generator with engineer support",
+  "description": "Full backend for CodeGoldenAI with Google OAuth, OpenAI GPT, and Gemini Ultra integration",
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "start": "node index.js"
+    "start": "node index.js",
+    "dev": "nodemon index.js"
   },
-  "author": "GoldenSpaceAI",
+  "author": "",
   "license": "MIT",
   "dependencies": {
-    "body-parser": "^1.20.2",
-    "cors": "^2.8.5",
-    "dotenv": "^16.3.1",
+    "@google/generative-ai": "^0.21.0",
+    "dotenv": "^16.4.5",
     "express": "^4.19.2",
     "express-session": "^1.17.3",
-    "multer": "^1.4.5-lts.1",
-    "nodemailer": "^6.9.8",
     "openai": "^4.59.0",
     "passport": "^0.7.0",
     "passport-google-oauth20": "^2.0.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.0"
   }
 }
