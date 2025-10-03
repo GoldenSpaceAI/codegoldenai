@@ -113,21 +113,17 @@ app.post("/api/generate-ultra", async (req, res) => {
       return res.status(400).json({ error: "No messages provided (expected an array)." });
     }
 
-    // Keep only the last 20 messages
+    // Keep only last 20 messages
     const recent = messages.slice(-20);
 
-    // Convert to Gemini format
-    const history = recent.map(m => ({
+    const contents = recent.map(m => ({
       role: m.role === "assistant" ? "model" : "user",
       parts: [{ text: m.content }]
     }));
 
-    // Use Gemini 2.5 Pro
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-pro" });
+    const result = await model.generateContent({ contents });
 
-    const result = await model.generateContent({ contents: history });
-
-    // Extract response safely
     const reply = result?.response?.text?.() || "⚠️ No reply from Ultra AI.";
     res.json({ text: reply });
 
@@ -135,7 +131,7 @@ app.post("/api/generate-ultra", async (req, res) => {
     console.error("Ultra AI error:", err?.message || err);
     res.status(500).json({ error: "Ultra AI failed: " + (err?.message || "unknown error") });
   }
-});// ---------- Start ----------
+});});// ---------- Start ----------
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });
