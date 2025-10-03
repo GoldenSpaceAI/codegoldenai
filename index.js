@@ -104,36 +104,41 @@ app.post("/api/generate-advanced", async (req, res) => {
   }
 });
 
-// Ultra AI (Gemini 2.5 Pro) — remembers last 20 messages
+// ========== Ultra AI (Gemini 2.5 Pro with 20-message memory) ==========
+
+import { GoogleGenerativeAI } from "@google/generative-ai";
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 app.post("/api/generate-ultra", async (req, res) => {
   try {
-    const { messages } = req.body; // [{role:"user"|"assistant", content:"..."}]
+    const { messages } = req.body;
+
     if (!messages || !Array.isArray(messages)) {
-      return res.status(400).json({ error: "No messages provided." });
+      return res.status(400).json({ error: "No messages provided (expected an array)." });
     }
 
-    // keep only last 20 turns
+    // Keep only the last 20 messages
     const recent = messages.slice(-20);
 
-    // Build Gemini contents (role + parts)
-    const contents = recent.map((m) => ({
-      role: m.role,
-      parts: [{ text: m.content }],
+    // Convert to Gemini's expected format
+    const history = recent.map(m => ({
+      role: m.role === "assistant" ? "model" : "user",
+      parts: [{ text: m.content }]
     }));
 
+    // Call Gemini 2.5 Pro
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-pro" });
-    const result = await model.generateContent({ contents });
+    const result = await model.generateContent({ contents: history });
 
-    const text = result?.response?.text?.() || result?.response?.text?.() || "No reply.";
-    res.json({ text });
+    // Extract response safely
+    const reply = result?.response?.text?.() || "⚠️ No reply generated.";
+    res.json({ text: reply });
+
   } catch (err) {
-    console.error("Ultra AI error:", err);
-    res.status(500).json({ error: "Error generating response." });
+    console.error("Ultra AI error:", err?.message || err);
+    res.status(500).json({ error: "Ultra AI failed: " + (err?.message || "unknown error") });
   }
 });
-
 // ---------- Start ----------
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
