@@ -116,28 +116,25 @@ app.post("/api/generate-advanced", async (req, res) => {
   }
 });
 
-// UltraAI (Gemini Pro/Ultra)
+// UltraAI (Gemini 2.5 Pro)
 app.post("/api/generate-ultra", async (req, res) => {
   try {
     const { prompt } = req.body;
     if (!prompt) return res.status(400).json({ error: "No prompt provided." });
 
+    const { GoogleGenerativeAI } = await import("@google/generative-ai");
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-
-    // Use latest Gemini Pro instead of "gemini-pro"
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-pro" });
 
     const result = await model.generateContent(prompt);
-    const text = result.response?.text?.() || "No reply.";
+    const text = result.response?.text?.() || "No response.";
 
     res.json({ text });
   } catch (err) {
     console.error("UltraAI error:", err);
     res.status(500).json({ error: "Error generating Ultra AI response." });
   }
-});
-
-// ========== START SERVER ==========
+});// ========== START SERVER ==========
 app.listen(PORT, () => {
   console.log(`🚀 Server running at http://localhost:${PORT}`);
 });
