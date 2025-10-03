@@ -130,7 +130,7 @@ app.post("/api/generate-ultra", async (req, res) => {
   } catch (err) {
     console.error("Ultra AI error:", err?.message || err);
     res.status(500).json({ error: "Ultra AI failed: " + (err?.message || "unknown error") });
-  }
+  
 });});// ---------- Start ----------
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
