@@ -73,37 +73,49 @@ app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "login.html"));
 });
 
-// API for Playground (GPT-4o-mini)
+// ========== AI ROUTES ==========
+
+// Playground (GPT-4o-mini)
 app.post("/api/generate-playground", async (req, res) => {
   try {
+    const { prompt } = req.body;
+    if (!prompt) return res.status(400).json({ error: "No prompt provided." });
+
     const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
-      messages: [{ role: "user", content: req.body.prompt }],
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.7,
     });
-    res.json({ text: completion.choices[0].message.content });
+
+    res.json({ text: completion.choices[0]?.message?.content || "No response." });
   } catch (err) {
-    console.error(err);
+    console.error("Playground error:", err);
     res.status(500).json({ error: "Error generating response." });
   }
 });
 
-// API for AdvancedAI (GPT-4)
+// AdvancedAI (GPT-4)
 app.post("/api/generate-advanced", async (req, res) => {
   try {
+    const { prompt } = req.body;
+    if (!prompt) return res.status(400).json({ error: "No prompt provided." });
+
     const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
     const completion = await openai.chat.completions.create({
       model: "gpt-4",
-      messages: [{ role: "user", content: req.body.prompt }],
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.6,
     });
-    res.json({ text: completion.choices[0].message.content });
+
+    res.json({ text: completion.choices[0]?.message?.content || "No response." });
   } catch (err) {
-    console.error(err);
+    console.error("AdvancedAI error:", err);
     res.status(500).json({ error: "Error generating response." });
   }
 });
 
-// Start server
+// ========== START SERVER ==========
 app.listen(PORT, () => {
   console.log(`🚀 Server running at http://localhost:${PORT}`);
 });
