@@ -1,241 +1,282 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>GoldenSpaceAI • Ultra AI</title>
-  <style>
-    :root {
-      --gold-1:#ffd700; --gold-2:#f6c64a; --gold-3:#eb8b36;
-      --text:#faf7e8; --muted:#b8c3dc;
-      --glass: rgba(255,255,255,.08); --ring: rgba(255,215,0,.35);
-      --bg: #070b14;
-    }
-    body {
-      margin:0; font-family: "Segoe UI", system-ui, sans-serif;
-      color:var(--text);
-      background:
-        radial-gradient(1200px 800px at 75% -20%, rgba(255,215,0,.18), transparent 40%),
-        radial-gradient(800px 600px at 10% 120%, rgba(255,215,0,.08), transparent 45%),
-        var(--bg);
-      height:100vh; display:flex; flex-direction:column;
-    }
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>GoldenSpaceAI • Ultra AI (Gemini 2.5 Pro)</title>
+<meta name="color-scheme" content="dark light" />
+<link rel="icon" href="/favicon.ico"/>
 
-    header {
-      display:flex; align-items:center; gap:10px;
-      justify-content:space-between;
-      padding:1rem 1.5rem;
-      background:linear-gradient(90deg, var(--gold-2), var(--gold-3));
-      color:#141209; font-weight:700; font-size:1.1rem;
-      box-shadow:0 4px 20px rgba(0,0,0,.35);
-    }
-    .brand { display:flex; align-items:center; gap:.6rem; }
-    .logo { width:28px; height:28px; border-radius:50%;
-      background:conic-gradient(from 210deg, var(--gold-1), var(--gold-2), var(--gold-3), var(--gold-1));
-      box-shadow:0 0 0 2px rgba(255,215,0,.35), 0 0 26px rgba(255,215,0,.35) inset;
-    }
-    .badge {
-      background:#141209; color:var(--gold-1);
-      padding:0.3rem 0.7rem; border-radius:999px; font-size:0.8rem;
-      font-weight:800; box-shadow:0 0 10px rgba(255,215,0,.35);
-      white-space:nowrap;
-    }
-    .actions { display:flex; gap:.5rem; }
-    .actions button {
-      border:none; cursor:pointer; font-weight:800; border-radius:10px;
-      padding:.55rem .8rem; color:#141209;
-      background:linear-gradient(180deg,var(--gold-1), var(--gold-2));
-      box-shadow:0 4px 12px rgba(255,215,0,.3);
-    }
+<style>
+  :root{
+    --bg:#05060a; --panel:#0b0f17; --panel2:#0a101b; --line:#1c273a;
+    --text:#eef2ff; --muted:#aab5cf; --gold:#f6c64a; --gold2:#eb8b36; --accent:#7aa6ff;
+    --good:#2dd4bf; --warn:#ffb020; --err:#ff6b6b; --shadow:0 30px 120px rgba(0,0,0,.45);
+    --radius:18px; --radius-sm:12px; --max:1180px;
+  }
+  @media(prefers-color-scheme:light){
+    :root{--bg:#f6f8ff; --panel:#ffffff; --panel2:#f9fbff; --line:#e8eef9; --text:#0c1222; --muted:#415172; --shadow:0 24px 80px rgba(10,15,30,.08)}
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0; background:
+      radial-gradient(900px 420px at 85% -10%, rgba(246,198,74,.18), transparent 50%),
+      radial-gradient(700px 380px at -10% 120%, rgba(122,166,255,.12), transparent 55%),
+      var(--bg);
+    color:var(--text); font:16px/1.6 Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial;
+  }
 
-    main {
-      flex:1; padding:1rem; overflow-y:auto;
-      display:flex; flex-direction:column; gap:1rem;
-    }
-    .msg {
-      padding:1rem 1.3rem; border-radius:14px; max-width:80%;
-      line-height:1.5; box-shadow:0 4px 15px rgba(0,0,0,.3);
-      word-wrap:break-word; white-space:pre-wrap;
-    }
-    .msg.user {
-      background:var(--gold-3); color:#141209; align-self:flex-end;
-      border-bottom-right-radius:0;
-    }
-    .msg.ai {
-      background:var(--glass); border:1px solid rgba(255,215,0,.25);
-      align-self:flex-start; border-bottom-left-radius:0;
-    }
+  header{
+    position:sticky; top:0; z-index:10; backdrop-filter: blur(10px);
+    background:linear-gradient(180deg, rgba(5,6,10,.8), rgba(5,6,10,.45) 60%, transparent);
+    border-bottom:1px solid var(--line);
+  }
+  .top{max-width:var(--max); margin:0 auto; padding:14px 16px; display:flex; align-items:center; gap:12px}
+  .brand{display:flex; align-items:center; gap:10px; font-weight:900; letter-spacing:.3px}
+  .orb{width:24px;height:24px;border-radius:50%;
+    background:conic-gradient(from 210deg, var(--gold), var(--gold2), var(--gold));
+    box-shadow:0 0 0 2px rgba(246,198,74,.35), 0 0 40px rgba(246,198,74,.25) inset;
+  }
+  .badge{font-size:12px;font-weight:800;color:#151109;background:linear-gradient(180deg,var(--gold),var(--gold2));
+    padding:4px 10px;border-radius:999px; box-shadow:0 6px 18px rgba(246,198,74,.25)}
+  .sp{flex:1}
+  .pill{display:inline-flex; gap:8px; align-items:center; padding:8px 12px; border-radius:12px;
+    border:1px solid var(--line); color:var(--muted); background:transparent; cursor:pointer; font-weight:800}
+  .pill:hover{filter:brightness(1.05)}
+  .go{background:linear-gradient(180deg,var(--gold),var(--gold2)); color:#1b1504; border:0}
 
-    .composer {
-      display:flex; gap:0.6rem; padding:1rem;
-      background:rgba(0,0,0,.6); border-top:1px solid rgba(255,255,255,.08);
-    }
-    .composer input {
-      flex:1; padding:0.9rem; border-radius:10px; border:1px solid rgba(255,255,255,.2);
-      background:rgba(255,255,255,.07); color:var(--text); outline:none;
-    }
-    .composer button {
-      padding:0.9rem 1.3rem; border-radius:10px; border:none;
-      font-weight:800; cursor:pointer;
-      background:linear-gradient(180deg,var(--gold-1),var(--gold-2));
-      color:#141209; box-shadow:0 4px 12px rgba(255,215,0,.3);
-    }
+  main{max-width:var(--max); margin:14px auto; padding:0 16px; display:grid; grid-template-columns: 280px 1fr; gap:16px}
+  @media(max-width:980px){ main{ grid-template-columns:1fr } }
 
-    /* Unlock overlay */
-    .overlay {
-      position:fixed; inset:0; display:grid; place-items:center;
-      background:rgba(0,0,0,.6); backdrop-filter: blur(6px);
-      padding:1rem; z-index:10;
-    }
-    .card {
-      width:min(520px, 92%); background:rgba(10,12,20,.9);
-      border:1px solid rgba(255,255,255,.12); border-radius:16px; padding:1.2rem;
-      box-shadow:0 20px 60px rgba(0,0,0,.6);
-    }
-    .card h2 { margin:.2rem 0 .2rem; font-size:1.2rem; }
-    .card p { margin:.4rem 0 1rem; color:var(--muted) }
-    .field { display:flex; gap:.5rem; }
-    .field input {
-      flex:1; padding:.8rem; border-radius:10px;
-      border:1px solid rgba(255,255,255,.2); background:rgba(255,255,255,.07);
-      color:var(--text); outline:none;
-    }
-    .field button {
-      padding:.85rem 1rem; border-radius:10px; border:none;
-      font-weight:800; cursor:pointer;
-      background:linear-gradient(180deg,var(--gold-1),var(--gold-2)); color:#141209;
-      box-shadow:0 4px 12px rgba(255,215,0,.3);
-    }
-    .hint { margin-top:.7rem; font-size:.85rem; color:#f6d77a }
-    .err  { margin-top:.6rem; color:#ff8a8a; font-weight:800; display:none }
-  </style>
+  /* Left panel */
+  .side{
+    background:linear-gradient(180deg,var(--panel),var(--panel2));
+    border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); padding:14px;
+    display:flex; flex-direction:column; gap:12px; height:fit-content
+  }
+  .stat{display:flex; align-items:center; gap:10px; padding:10px; border:1px solid var(--line); border-radius:12px}
+  .stat i{font-style:normal; font-weight:900; color:var(--gold2)}
+  .unlock{
+    display:flex; flex-direction:column; gap:8px; padding:12px; border:1px dashed var(--line); border-radius:12px;
+    background:rgba(246,198,74,.06)
+  }
+  .unlock input{width:100%; padding:10px 12px; border-radius:10px; border:1px solid var(--line); background:transparent; color:var(--text)}
+  .unlock button{align-self:flex-end}
+
+  /* Chat area */
+  .chatwrap{
+    background:linear-gradient(180deg,var(--panel),var(--panel2));
+    border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow);
+    display:flex; flex-direction:column; min-height:68vh; overflow:hidden
+  }
+  .msgs{padding:20px; overflow:auto; max-height:65vh}
+  .msg{max-width:min(820px,92%); padding:14px 16px; border-radius:16px; margin:8px 0; line-height:1.6; border:1px solid var(--line)}
+  .msg.ai{ background:rgba(122,166,255,.08) }
+  .msg.user{ background:rgba(246,198,74,.12); margin-left:auto }
+  .msg small{display:block; opacity:.65; font-size:12px; margin-bottom:6px}
+  .code{background:#0e1626; color:#eaf1ff; padding:12px; border-radius:10px; overflow:auto; font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:.92rem}
+  .warn{display:inline-flex; align-items:center; gap:8px; color:#1c1504; background:linear-gradient(180deg,#ffd56a,#f6c64a);
+        border-radius:12px; padding:6px 10px; font-weight:900}
+
+  .composer{display:flex; gap:10px; padding:12px; border-top:1px solid var(--line); background:rgba(0,0,0,.04)}
+  .composer textarea{flex:1; resize:none; min-height:56px; max-height:140px; padding:12px 14px; border-radius:12px;
+    border:1px solid var(--line); background:transparent; color:var(--text); outline:none}
+  .btn{height:56px; min-width:56px; padding:0 16px; border-radius:14px; border:1px solid var(--line); background:transparent; color:var(--text);
+       font-weight:900; cursor:pointer}
+  .btn.send{background:linear-gradient(180deg,var(--gold),var(--gold2)); color:#1c1504; border:0; box-shadow:0 10px 24px rgba(246,198,74,.25)}
+  .btn.stop{background:#2f3342}
+  .spinner{width:18px;height:18px;border-radius:50%; border:2px solid rgba(255,255,255,.25); border-top-color:var(--gold); animation:spin 1s linear infinite; display:inline-block; vertical-align:middle}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  .toast{position:fixed; right:14px; bottom:14px; background:#0d1525; border:1px solid var(--line); color:#ffdca1; padding:10px 12px; border-radius:10px; box-shadow:var(--shadow); opacity:0; transform:translateY(6px); transition:.25s}
+  .toast.show{opacity:1; transform:translateY(0)}
+</style>
 </head>
 <body>
-  <header>
-    <div class="brand">
-      <div class="logo"></div>
-      <div>GoldenSpaceAI • Ultra AI</div>
-    </div>
-    <div class="actions">
-      <span class="badge">Gemini Ultra • 30 USDT/month</span>
-      <button id="lockBtn" title="Lock this device">Lock</button>
-    </div>
-  </header>
 
-  <main id="chat">
-    <div class="msg ai">💎 Welcome to <strong>Ultra AI</strong>. Enter your premium question—Gemini Ultra will respond with advanced reasoning and detailed answers.</div>
-  </main>
-
-  <div class="composer">
-    <input id="prompt" type="text" placeholder="Ask Ultra…" />
-    <button id="sendBtn">Send</button>
+<header>
+  <div class="top">
+    <div class="brand"><span class="orb"></span> GoldenSpaceAI</div>
+    <span class="badge">ULTRA • Gemini 2.5 Pro</span>
+    <div class="sp"></div>
+    <a class="pill" href="/index.html">Home</a>
+    <button id="newChat" class="pill">New Chat</button>
   </div>
+</header>
 
-  <!-- Unlock Gate -->
-  <div class="overlay" id="unlockOverlay" aria-modal="true" role="dialog">
-    <div class="card">
-      <h2>🔐 Ultra Access Code</h2>
-      <p>Enter your Ultra unlock code to enable Gemini Ultra on this device.</p>
-      <div class="field">
-        <input id="unlockInput" type="password" placeholder="Enter unlock code" />
-        <button id="unlockBtn">Unlock</button>
+<main>
+  <!-- LEFT SIDEBAR -->
+  <aside class="side">
+    <div class="stat"><i>◎</i> <div><strong>Model:</strong> Gemini 2.5 Pro<br><small style="color:var(--muted)">Premium reasoning & fidelity</small></div></div>
+    <div class="stat"><i>⚡</i> <div><strong>Status:</strong> <span id="status">Ready</span></div></div>
+    <div class="unlock">
+      <div style="font-weight:900">Unlock Ultra</div>
+      <small style="color:var(--muted)">Enter your unlock code (must end with <b>777999888654</b>). Saved to this device only.</small>
+      <input id="unlock" placeholder="Enter unlock code"/>
+      <button id="unlockBtn" class="pill go">Unlock</button>
+      <small id="unlockNote" style="color:var(--muted)"></small>
+    </div>
+    <div class="stat"><i>ℹ︎</i> <div><strong>Tip:</strong> Paste code or files; Ultra will explain and improve them.</div></div>
+  </aside>
+
+  <!-- CHAT PANE -->
+  <section class="chatwrap">
+    <div id="stream" class="msgs">
+      <div class="msg ai">
+        <small>Ultra AI</small>
+        Welcome to <b>Ultra AI</b>. Ask complex, multi-step questions — I’ll respond with structured, professional answers.  
+        <div style="margin-top:8px" class="warn">💎 Ultra active • Gemini 2.5 Pro</div>
       </div>
-      <div class="hint">Hint: Your code must <strong>end with</strong> <code>777999888654</code>.</div>
-      <div class="err" id="unlockErr">Invalid code. Please try again.</div>
     </div>
-  </div>
 
-  <script>
-    // ---------- Unlock Logic ----------
-    const OVERLAY_ID = "unlockOverlay";
-    const STORAGE_KEY = "ultra:unlocked";
-    const REQUIRED_SUFFIX = "777999888654";
+    <div class="composer">
+      <textarea id="prompt" placeholder="Ask anything premium… (Shift+Enter = newline)"></textarea>
+      <button id="send" class="btn send">Send ➤</button>
+    </div>
+  </section>
+</main>
 
-    const overlay   = document.getElementById(OVERLAY_ID);
-    const unlockInp = document.getElementById("unlockInput");
-    const unlockBtn = document.getElementById("unlockBtn");
-    const unlockErr = document.getElementById("unlockErr");
-    const lockBtn   = document.getElementById("lockBtn");
+<div id="toast" class="toast">Saved</div>
 
-    function isUnlocked() {
-      return localStorage.getItem(STORAGE_KEY) === "yes";
+<script>
+  // ========= Config =========
+  const BACKEND = "/api/generate-ultra";   // your Node route (Gemini 2.5 Pro)
+  const KEY_ENDING = "777999888654";       // unlock ending
+  const STORE_KEY  = "gsai:ultra:unlock";  // localStorage key
+
+  // ========= Elements =========
+  const stream  = document.getElementById("stream");
+  const promptE = document.getElementById("prompt");
+  const sendBtn = document.getElementById("send");
+  const statusE = document.getElementById("status");
+  const unlockI = document.getElementById("unlock");
+  const unlockB = document.getElementById("unlockBtn");
+  const unlockN = document.getElementById("unlockNote");
+  const newChat = document.getElementById("newChat");
+  const toast   = document.getElementById("toast");
+
+  // ========= Unlock =========
+  const saved = localStorage.getItem(STORE_KEY) || "";
+  if(saved) unlockI.value = saved;
+  function hasAccess(){
+    const v = (localStorage.getItem(STORE_KEY) || "").trim();
+    return v && v.endsWith(KEY_ENDING);
+  }
+  function requireAccess(){
+    if(!hasAccess()){
+      addAI("🔒 Ultra is locked. Enter a valid unlock code in the left panel.");
+      return false;
     }
-    function setUnlocked(v) {
-      if (v) localStorage.setItem(STORAGE_KEY, "yes");
-      else   localStorage.removeItem(STORAGE_KEY);
+    return true;
+  }
+  unlockB.addEventListener("click", ()=>{
+    const val = (unlockI.value||"").trim();
+    if(!val || !val.endsWith(KEY_ENDING)){
+      unlockN.textContent = "Invalid code. It must end with " + KEY_ENDING + ".";
+      unlockN.style.color = "var(--err)";
+      showToast("Invalid code");
+      return;
     }
-    function updateGate() {
-      overlay.style.display = isUnlocked() ? "none" : "grid";
+    localStorage.setItem(STORE_KEY, val);
+    unlockN.textContent = "Ultra unlocked on this device.";
+    unlockN.style.color = "var(--good)";
+    showToast("Ultra unlocked");
+  });
+
+  // ========= Chat helpers =========
+  function el(tag, attrs={}, ...kids){
+    const n = document.createElement(tag);
+    for(const [k,v] of Object.entries(attrs)){
+      if(k==="class") n.className=v;
+      else if(k==="html") n.innerHTML=v;
+      else n.setAttribute(k,v);
     }
+    for(const k of kids) n.append(k instanceof Node ? k : document.createTextNode(k));
+    return n;
+  }
+  function addUser(text){
+    const m = el("div",{class:"msg user"});
+    m.append(el("small",{},"You"));
+    m.append(el("div",{html:escapeHtml(text).replace(/\n/g,"<br/>")}));
+    stream.append(m); stream.scrollTop = stream.scrollHeight;
+  }
+  function addAI(text){
+    const m = el("div",{class:"msg ai"});
+    m.append(el("small",{},"Ultra AI"));
+    m.append(el("div",{html:text}));
+    stream.append(m); stream.scrollTop = stream.scrollHeight;
+    return m;
+  }
+  function addSpinner(){
+    const m = el("div",{class:"msg ai"});
+    m.append(el("small",{},"Ultra AI"));
+    m.append(el("div",{html:'<span class="spinner"></span> Thinking…'}));
+    stream.append(m); stream.scrollTop = stream.scrollHeight;
+    return m;
+  }
+  function showToast(t){
+    toast.textContent = t;
+    toast.classList.add("show");
+    setTimeout(()=>toast.classList.remove("show"), 1400);
+  }
+  function escapeHtml(t){
+    return (t||"").replace(/[&<>\"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
+  }
 
-    // Initialize gate on load
-    updateGate();
+  // ========= Send =========
+  async function send(){
+    const q = (promptE.value||"").trim();
+    if(!q) return;
+    if(!requireAccess()) return;
 
-    unlockBtn.addEventListener("click", ()=>{
-      const value = (unlockInp.value || "").trim();
-      if (value && value.endsWith(REQUIRED_SUFFIX)) {
-        setUnlocked(true);
-        unlockErr.style.display = "none";
-        overlay.style.display = "none";
-        unlockInp.value = "";
-      } else {
-        unlockErr.style.display = "block";
+    addUser(q);
+    const row = addSpinner();
+    sendBtn.disabled = true; statusE.textContent = "Working…";
+
+    try{
+      const r = await fetch(BACKEND, {
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({ prompt: q })
+      });
+
+      if(!r.ok){
+        stream.removeChild(row);
+        addAI(`<div class="warn">⚠️ No reply from Ultra AI. (${r.status})</div>`);
+      }else{
+        const j = await r.json();
+        stream.removeChild(row);
+
+        const text = (j.text || j.reply || j.answer || "").trim();
+        if(!text){
+          addAI(`<div class="warn">⚠️ No reply from Ultra AI.</div>`);
+        }else{
+          // simple formatting: wrap triple-backtick blocks
+          const html = escapeHtml(text)
+            .replace(/```([\s\S]*?)```/g, (_m, p1) => `<pre class="code">${escapeHtml(p1).trim()}</pre>`)
+            .replace(/\n/g,"<br/>");
+          addAI(html);
+        }
       }
-    });
-
-    lockBtn.addEventListener("click", ()=>{
-      setUnlocked(false);
-      updateGate();
-    });
-
-    // ---------- Chat Logic ----------
-    const chat    = document.getElementById("chat");
-    const promptI = document.getElementById("prompt");
-    const sendBtn = document.getElementById("sendBtn");
-
-    function addMsg(text, role) {
-      const div = document.createElement("div");
-      div.className = "msg " + role;
-      div.textContent = text;
-      chat.appendChild(div);
-      chat.scrollTop = chat.scrollHeight;
-      return div;
+    }catch(e){
+      stream.removeChild(row);
+      addAI(`<div class="warn">⚠️ ${escapeHtml(e.message)}</div>`);
+    }finally{
+      sendBtn.disabled = false; statusE.textContent = "Ready";
+      promptE.value = "";
+      stream.scrollTop = stream.scrollHeight;
     }
+  }
 
-    async function send() {
-      const text = (promptI.value || "").trim();
-      if (!text) return;
-      if (!isUnlocked()) {
-        // Soft reminder if someone tries to send without unlocking
-        document.getElementById(OVERLAY_ID).style.display = "grid";
-        return;
-      }
-
-      addMsg(text, "user");
-      promptI.value = "";
-
-      const aiMsg = addMsg("⏳ Thinking with Gemini Ultra…", "ai");
-      try {
-        const res = await fetch("/api/generate-ultra", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({ prompt: text })
-        });
-        const data = await res.json();
-        aiMsg.textContent = data.text || "⚠️ No reply from Ultra AI.";
-      } catch (err) {
-        aiMsg.textContent = "❌ Failed to connect to Ultra AI.";
-      }
-    }
-
-    sendBtn.addEventListener("click", send);
-    promptI.addEventListener("keydown", (e)=>{
-      if (e.key === "Enter" && !e.shiftKey) {
-        e.preventDefault();
-        send();
-      }
-    });
-  </script>
+  sendBtn.addEventListener("click", send);
+  promptE.addEventListener("keydown", e=>{
+    if(e.key==="Enter" && !e.shiftKey){ e.preventDefault(); send(); }
+  });
+  newChat.addEventListener("click", ()=>{
+    stream.innerHTML = "";
+    addAI('New chat started. <span class="warn">💎 Ultra active • Gemini 2.5 Pro</span>');
+  });
+</script>
 </body>
 </html>
