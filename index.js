@@ -7,6 +7,7 @@ import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
 import OpenAI from "openai";
+import { GoogleGenerativeAI } from "@google/generative-ai";  // ✅ Gemini SDK
 
 dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
@@ -112,6 +113,25 @@ app.post("/api/generate-advanced", async (req, res) => {
   } catch (err) {
     console.error("AdvancedAI error:", err);
     res.status(500).json({ error: "Error generating response." });
+  }
+});
+
+// UltraAI (Gemini Ultra)
+app.post("/api/generate-ultra", async (req, res) => {
+  try {
+    const { prompt } = req.body;
+    if (!prompt) return res.status(400).json({ error: "No prompt provided." });
+
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" }); // ✅ Gemini Ultra
+
+    const result = await model.generateContent(prompt);
+    const text = result?.response?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+    res.json({ text: text || "No response." });
+  } catch (err) {
+    console.error("UltraAI error:", err);
+    res.status(500).json({ error: "Error generating Ultra response." });
   }
 });
 
