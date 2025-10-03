@@ -117,7 +117,6 @@ app.post("/api/generate-advanced", async (req, res) => {
 });
 
 // Ultra AI (Gemini 2.5 Pro with memory of last 20 messages)
-import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
