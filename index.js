@@ -105,10 +105,6 @@ app.post("/api/generate-advanced", async (req, res) => {
 });
 
 // ========== Ultra AI (Gemini 2.5 Pro with 20-message memory) ==========
-
-import { GoogleGenerativeAI } from "@google/generative-ai";
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-
 app.post("/api/generate-ultra", async (req, res) => {
   try {
     const { messages } = req.body;
@@ -120,26 +116,26 @@ app.post("/api/generate-ultra", async (req, res) => {
     // Keep only the last 20 messages
     const recent = messages.slice(-20);
 
-    // Convert to Gemini's expected format
+    // Convert to Gemini format
     const history = recent.map(m => ({
       role: m.role === "assistant" ? "model" : "user",
       parts: [{ text: m.content }]
     }));
 
-    // Call Gemini 2.5 Pro
+    // Use Gemini 2.5 Pro
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-pro" });
+
     const result = await model.generateContent({ contents: history });
 
     // Extract response safely
-    const reply = result?.response?.text?.() || "⚠️ No reply generated.";
+    const reply = result?.response?.text?.() || "⚠️ No reply from Ultra AI.";
     res.json({ text: reply });
 
   } catch (err) {
     console.error("Ultra AI error:", err?.message || err);
     res.status(500).json({ error: "Ultra AI failed: " + (err?.message || "unknown error") });
   }
-});
-// ---------- Start ----------
+});// ---------- Start ----------
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });
