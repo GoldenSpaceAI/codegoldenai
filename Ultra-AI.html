@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>GoldenSpaceAI • Ultra AI</title>
+  <style>
+    :root {
+      --gold-1:#ffd700; --gold-2:#f6c64a; --gold-3:#eb8b36;
+      --text:#faf7e8; --muted:#b8c3dc;
+      --glass: rgba(255,255,255,.08); --ring: rgba(255,215,0,.35);
+      --bg: #070b14;
+    }
+    body {
+      margin:0; font-family: "Segoe UI", system-ui, sans-serif;
+      color:var(--text);
+      background:
+        radial-gradient(1200px 800px at 75% -20%, rgba(255,215,0,.18), transparent 40%),
+        radial-gradient(800px 600px at 10% 120%, rgba(255,215,0,.08), transparent 45%),
+        var(--bg);
+      height:100vh; display:flex; flex-direction:column;
+    }
+
+    header {
+      display:flex; align-items:center; gap:10px;
+      justify-content:space-between;
+      padding:1rem 1.5rem;
+      background:linear-gradient(90deg, var(--gold-2), var(--gold-3));
+      color:#141209; font-weight:700; font-size:1.1rem;
+      box-shadow:0 4px 20px rgba(0,0,0,.35);
+    }
+    .brand { display:flex; align-items:center; gap:.6rem; }
+    .logo { width:28px; height:28px; border-radius:50%;
+      background:conic-gradient(from 210deg, var(--gold-1), var(--gold-2), var(--gold-3), var(--gold-1));
+      box-shadow:0 0 0 2px rgba(255,215,0,.35), 0 0 26px rgba(255,215,0,.35) inset;
+    }
+    .badge {
+      background:#141209; color:var(--gold-1);
+      padding:0.3rem 0.7rem; border-radius:999px; font-size:0.8rem;
+      font-weight:800; box-shadow:0 0 10px rgba(255,215,0,.35);
+      white-space:nowrap;
+    }
+    .actions { display:flex; gap:.5rem; }
+    .actions button {
+      border:none; cursor:pointer; font-weight:800; border-radius:10px;
+      padding:.55rem .8rem; color:#141209;
+      background:linear-gradient(180deg,var(--gold-1), var(--gold-2));
+      box-shadow:0 4px 12px rgba(255,215,0,.3);
+    }
+
+    main {
+      flex:1; padding:1rem; overflow-y:auto;
+      display:flex; flex-direction:column; gap:1rem;
+    }
+    .msg {
+      padding:1rem 1.3rem; border-radius:14px; max-width:80%;
+      line-height:1.5; box-shadow:0 4px 15px rgba(0,0,0,.3);
+      word-wrap:break-word; white-space:pre-wrap;
+    }
+    .msg.user {
+      background:var(--gold-3); color:#141209; align-self:flex-end;
+      border-bottom-right-radius:0;
+    }
+    .msg.ai {
+      background:var(--glass); border:1px solid rgba(255,215,0,.25);
+      align-self:flex-start; border-bottom-left-radius:0;
+    }
+
+    .composer {
+      display:flex; gap:0.6rem; padding:1rem;
+      background:rgba(0,0,0,.6); border-top:1px solid rgba(255,255,255,.08);
+    }
+    .composer input {
+      flex:1; padding:0.9rem; border-radius:10px; border:1px solid rgba(255,255,255,.2);
+      background:rgba(255,255,255,.07); color:var(--text); outline:none;
+    }
+    .composer button {
+      padding:0.9rem 1.3rem; border-radius:10px; border:none;
+      font-weight:800; cursor:pointer;
+      background:linear-gradient(180deg,var(--gold-1),var(--gold-2));
+      color:#141209; box-shadow:0 4px 12px rgba(255,215,0,.3);
+    }
+
+    /* Unlock overlay */
+    .overlay {
+      position:fixed; inset:0; display:grid; place-items:center;
+      background:rgba(0,0,0,.6); backdrop-filter: blur(6px);
+      padding:1rem; z-index:10;
+    }
+    .card {
+      width:min(520px, 92%); background:rgba(10,12,20,.9);
+      border:1px solid rgba(255,255,255,.12); border-radius:16px; padding:1.2rem;
+      box-shadow:0 20px 60px rgba(0,0,0,.6);
+    }
+    .card h2 { margin:.2rem 0 .2rem; font-size:1.2rem; }
+    .card p { margin:.4rem 0 1rem; color:var(--muted) }
+    .field { display:flex; gap:.5rem; }
+    .field input {
+      flex:1; padding:.8rem; border-radius:10px;
+      border:1px solid rgba(255,255,255,.2); background:rgba(255,255,255,.07);
+      color:var(--text); outline:none;
+    }
+    .field button {
+      padding:.85rem 1rem; border-radius:10px; border:none;
+      font-weight:800; cursor:pointer;
+      background:linear-gradient(180deg,var(--gold-1),var(--gold-2)); color:#141209;
+      box-shadow:0 4px 12px rgba(255,215,0,.3);
+    }
+    .hint { margin-top:.7rem; font-size:.85rem; color:#f6d77a }
+    .err  { margin-top:.6rem; color:#ff8a8a; font-weight:800; display:none }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <div class="logo"></div>
+      <div>GoldenSpaceAI • Ultra AI</div>
+    </div>
+    <div class="actions">
+      <span class="badge">Gemini Ultra • 30 USDT/month</span>
+      <button id="lockBtn" title="Lock this device">Lock</button>
+    </div>
+  </header>
+
+  <main id="chat">
+    <div class="msg ai">💎 Welcome to <strong>Ultra AI</strong>. Enter your premium question—Gemini Ultra will respond with advanced reasoning and detailed answers.</div>
+  </main>
+
+  <div class="composer">
+    <input id="prompt" type="text" placeholder="Ask Ultra…" />
+    <button id="sendBtn">Send</button>
+  </div>
+
+  <!-- Unlock Gate -->
+  <div class="overlay" id="unlockOverlay" aria-modal="true" role="dialog">
+    <div class="card">
+      <h2>🔐 Ultra Access Code</h2>
+      <p>Enter your Ultra unlock code to enable Gemini Ultra on this device.</p>
+      <div class="field">
+        <input id="unlockInput" type="password" placeholder="Enter unlock code" />
+        <button id="unlockBtn">Unlock</button>
+      </div>
+      <div class="hint">Hint: Your code must <strong>end with</strong> <code>777999888654</code>.</div>
+      <div class="err" id="unlockErr">Invalid code. Please try again.</div>
+    </div>
+  </div>
+
+  <script>
+    // ---------- Unlock Logic ----------
+    const OVERLAY_ID = "unlockOverlay";
+    const STORAGE_KEY = "ultra:unlocked";
+    const REQUIRED_SUFFIX = "777999888654";
+
+    const overlay   = document.getElementById(OVERLAY_ID);
+    const unlockInp = document.getElementById("unlockInput");
+    const unlockBtn = document.getElementById("unlockBtn");
+    const unlockErr = document.getElementById("unlockErr");
+    const lockBtn   = document.getElementById("lockBtn");
+
+    function isUnlocked() {
+      return localStorage.getItem(STORAGE_KEY) === "yes";
+    }
+    function setUnlocked(v) {
+      if (v) localStorage.setItem(STORAGE_KEY, "yes");
+      else   localStorage.removeItem(STORAGE_KEY);
+    }
+    function updateGate() {
+      overlay.style.display = isUnlocked() ? "none" : "grid";
+    }
+
+    // Initialize gate on load
+    updateGate();
+
+    unlockBtn.addEventListener("click", ()=>{
+      const value = (unlockInp.value || "").trim();
+      if (value && value.endsWith(REQUIRED_SUFFIX)) {
+        setUnlocked(true);
+        unlockErr.style.display = "none";
+        overlay.style.display = "none";
+        unlockInp.value = "";
+      } else {
+        unlockErr.style.display = "block";
+      }
+    });
+
+    lockBtn.addEventListener("click", ()=>{
+      setUnlocked(false);
+      updateGate();
+    });
+
+    // ---------- Chat Logic ----------
+    const chat    = document.getElementById("chat");
+    const promptI = document.getElementById("prompt");
+    const sendBtn = document.getElementById("sendBtn");
+
+    function addMsg(text, role) {
+      const div = document.createElement("div");
+      div.className = "msg " + role;
+      div.textContent = text;
+      chat.appendChild(div);
+      chat.scrollTop = chat.scrollHeight;
+      return div;
+    }
+
+    async function send() {
+      const text = (promptI.value || "").trim();
+      if (!text) return;
+      if (!isUnlocked()) {
+        // Soft reminder if someone tries to send without unlocking
+        document.getElementById(OVERLAY_ID).style.display = "grid";
+        return;
+      }
+
+      addMsg(text, "user");
+      promptI.value = "";
+
+      const aiMsg = addMsg("⏳ Thinking with Gemini Ultra…", "ai");
+      try {
+        const res = await fetch("/api/generate-ultra", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ prompt: text })
+        });
+        const data = await res.json();
+        aiMsg.textContent = data.text || "⚠️ No reply from Ultra AI.";
+      } catch (err) {
+        aiMsg.textContent = "❌ Failed to connect to Ultra AI.";
+      }
+    }
+
+    sendBtn.addEventListener("click", send);
+    promptI.addEventListener("keydown", (e)=>{
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        send();
+      }
+    });
+  </script>
+</body>
+</html>
