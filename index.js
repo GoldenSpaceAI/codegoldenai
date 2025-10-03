@@ -116,25 +116,35 @@ app.post("/api/generate-advanced", async (req, res) => {
   }
 });
 
-// UltraAI (Gemini 2.5 Pro)
+// Ultra AI (Gemini 2.5 Pro with memory of last 20 messages)
+import { GoogleGenerativeAI } from "@google/generative-ai";
+
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+
 app.post("/api/generate-ultra", async (req, res) => {
   try {
-    const { prompt } = req.body;
-    if (!prompt) return res.status(400).json({ error: "No prompt provided." });
+    const { messages } = req.body;
+    if (!messages || !Array.isArray(messages)) {
+      return res.status(400).json({ error: "No messages provided." });
+    }
 
-    const { GoogleGenerativeAI } = await import("@google/generative-ai");
-    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+    // Ensure max 20 messages
+    const recentMessages = messages.slice(-20);
+
+    // Convert messages into a single prompt
+    const history = recentMessages.map(m => `${m.role}: ${m.content}`).join("\n");
+
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-pro" });
+    const result = await model.generateContent(history);
 
-    const result = await model.generateContent(prompt);
-    const text = result.response?.text?.() || "No response.";
+    const reply = result.response.text() || "No reply.";
 
-    res.json({ text });
+    res.json({ text: reply });
   } catch (err) {
-    console.error("UltraAI error:", err);
-    res.status(500).json({ error: "Error generating Ultra AI response." });
+    console.error("Ultra AI error:", err);
+    res.status(500).json({ error: "Error generating response." });
   }
-});// ========== START SERVER ==========
+});});// ========== START SERVER ==========
 app.listen(PORT, () => {
   console.log(`🚀 Server running at http://localhost:${PORT}`);
 });
