@@ -1,4 +1,4 @@
-// index.js — Full backend for CodeGoldenAI
+// index.js — Full backend for CodeGoldenAI (ESM)
 import express from "express";
 import session from "express-session";
 import passport from "passport";
@@ -7,20 +7,21 @@ import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
 import OpenAI from "openai";
-import { GoogleGenerativeAI } from "@google/generative-ai";  // ✅ Gemini SDK
+import { GoogleGenerativeAI } from "@google/generative-ai"; // Gemini
 
 dotenv.config();
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware
+// ---------- Middleware ----------
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Sessions
+// ---------- Sessions ----------
 app.use(
   session({
     secret: process.env.SESSION_SECRET || "supersecret",
@@ -29,7 +30,7 @@ app.use(
   })
 );
 
-// Passport setup
+// ---------- Passport (Google OAuth) ----------
 app.use(passport.initialize());
 app.use(passport.session());
 
@@ -40,41 +41,28 @@ passport.use(
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
       callbackURL: "https://codegoldenai.onrender.com/auth/google/callback",
     },
-    (accessToken, refreshToken, profile, done) => {
-      return done(null, profile);
-    }
+    (_accessToken, _refreshToken, profile, done) => done(null, profile)
   )
 );
 
-passport.serializeUser((user, done) => {
-  done(null, user);
-});
-passport.deserializeUser((obj, done) => {
-  done(null, obj);
-});
+passport.serializeUser((user, done) => done(null, user));
+passport.deserializeUser((obj, done) => done(null, obj));
 
-// Google login routes
-app.get("/auth/google",
-  passport.authenticate("google", { scope: ["profile", "email"] })
-);
-
+app.get("/auth/google", passport.authenticate("google", { scope: ["profile", "email"] }));
 app.get(
   "/auth/google/callback",
-  passport.authenticate("google", {
-    failureRedirect: "/login.html",
-    successRedirect: "/index.html",
-  })
+  passport.authenticate("google", { failureRedirect: "/login.html", successRedirect: "/index.html" })
 );
 
-// Serve static frontend files
-app.use(express.static(path.join(__dirname)));
+// ---------- Static files ----------
+app.use(express.static(__dirname));
 
-// Default route → login.html
+// Default -> login
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "login.html"));
 });
 
-// ========== AI ROUTES ==========
+// ---------- AI ROUTES ----------
 
 // Playground (GPT-4o-mini)
 app.post("/api/generate-playground", async (req, res) => {
@@ -96,7 +84,7 @@ app.post("/api/generate-playground", async (req, res) => {
   }
 });
 
-// AdvancedAI (GPT-4)
+// Advanced AI (GPT-4)
 app.post("/api/generate-advanced", async (req, res) => {
   try {
     const { prompt } = req.body;
@@ -116,34 +104,37 @@ app.post("/api/generate-advanced", async (req, res) => {
   }
 });
 
-// Ultra AI (Gemini 2.5 Pro with memory of last 20 messages)
-
+// Ultra AI (Gemini 2.5 Pro) — remembers last 20 messages
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 app.post("/api/generate-ultra", async (req, res) => {
   try {
-    const { messages } = req.body;
+    const { messages } = req.body; // [{role:"user"|"assistant", content:"..."}]
     if (!messages || !Array.isArray(messages)) {
       return res.status(400).json({ error: "No messages provided." });
     }
 
-    // Ensure max 20 messages
-    const recentMessages = messages.slice(-20);
+    // keep only last 20 turns
+    const recent = messages.slice(-20);
 
-    // Convert messages into a single prompt
-    const history = recentMessages.map(m => `${m.role}: ${m.content}`).join("\n");
+    // Build Gemini contents (role + parts)
+    const contents = recent.map((m) => ({
+      role: m.role,
+      parts: [{ text: m.content }],
+    }));
 
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-pro" });
-    const result = await model.generateContent(history);
+    const result = await model.generateContent({ contents });
 
-    const reply = result.response.text() || "No reply.";
-
-    res.json({ text: reply });
+    const text = result?.response?.text?.() || result?.response?.text?.() || "No reply.";
+    res.json({ text });
   } catch (err) {
     console.error("Ultra AI error:", err);
     res.status(500).json({ error: "Error generating response." });
   }
-});});// ========== START SERVER ==========
+});
+
+// ---------- Start ----------
 app.listen(PORT, () => {
-  console.log(`🚀 Server running at http://localhost:${PORT}`);
+  console.log(`🚀 Server running on port ${PORT}`);
 });
