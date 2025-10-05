@@ -104,7 +104,6 @@
       padding: 1rem;
       border-radius: 8px;
       margin: 1rem 0;
-      display: none;
     }
     
     .success {
@@ -153,17 +152,73 @@
       padding: 1rem;
       border-radius: 8px;
       box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+      border-left: 4px solid var(--primary);
+    }
+    
+    .plan-card.free {
+      border-left-color: #10b981;
+    }
+    
+    .plan-card.plus {
+      border-left-color: #3b82f6;
+    }
+    
+    .plan-card.pro {
+      border-left-color: #8b5cf6;
     }
     
     .plan-card h4 {
       margin-top: 0;
-      color: var(--secondary);
+      color: var(--dark);
+    }
+    
+    .password-example {
+      background: #e9ecef;
+      padding: 0.8rem;
+      border-radius: 6px;
+      font-family: monospace;
+      margin: 0.5rem 0;
+      border: 1px dashed #adb5bd;
     }
     
     .usage-info {
       margin-top: 1.5rem;
       font-size: 0.9rem;
       color: var(--gray);
+    }
+    
+    .password-rules {
+      margin-top: 1rem;
+      padding: 1rem;
+      background: #fff3cd;
+      border-radius: 8px;
+      border-left: 4px solid #ffc107;
+    }
+    
+    .password-rules h4 {
+      margin-top: 0;
+      color: #856404;
+    }
+    
+    .loading {
+      display: none;
+      text-align: center;
+      padding: 2rem;
+    }
+    
+    .spinner {
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid var(--secondary);
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 2s linear infinite;
+      margin: 0 auto 1rem;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
     }
   </style>
 </head>
@@ -181,30 +236,42 @@
         <button class="btn" id="submitPassword">Unlock Engineer Access</button>
       </div>
       
-      <div class="message error" id="passwordError">
+      <div class="message error hidden" id="passwordError">
         Invalid password. Please check your plan password and try again.
       </div>
       
+      <div class="password-rules">
+        <h4>📋 Password Requirements</h4>
+        <p><strong>Free Plan:</strong> Password must be exactly <code>0000</code></p>
+        <p><strong>Plus Plan:</strong> Password must end with <code>444212</code></p>
+        <p><strong>Pro Plan:</strong> Password must end with <code>@_2211</code></p>
+      </div>
+      
       <div class="plan-info">
-        <h3>Plan Passwords</h3>
+        <h3>Plan Information & Examples</h3>
         <div class="plan-details">
-          <div class="plan-card">
-            <h4>Free Plan</h4>
-            <p>Password: <strong>0000</strong></p>
-            <p>1 request per month</p>
-            <p>Response within 4 days</p>
+          <div class="plan-card free">
+            <h4>🎯 Free Plan</h4>
+            <p><strong>Password:</strong></p>
+            <div class="password-example">0000</div>
+            <p><strong>Access:</strong> 1 request per month</p>
+            <p><strong>Response Time:</strong> Within 4 days</p>
           </div>
-          <div class="plan-card">
-            <h4>Plus Plan</h4>
-            <p>Password ends with: <strong>444212</strong></p>
-            <p>5 requests available</p>
-            <p>Response within 2 days</p>
+          <div class="plan-card plus">
+            <h4>🚀 Plus Plan</h4>
+            <p><strong>Password ends with:</strong></p>
+            <div class="password-example">444212</div>
+            <p><strong>Examples:</strong> mypassword444212, hello444212</p>
+            <p><strong>Access:</strong> 5 total requests</p>
+            <p><strong>Response Time:</strong> Within 2 days</p>
           </div>
-          <div class="plan-card">
-            <h4>Pro Plan</h4>
-            <p>Password ends with: <strong>@_2211</strong></p>
-            <p>Unlimited requests</p>
-            <p>Response within 24 hours</p>
+          <div class="plan-card pro">
+            <h4>💎 Pro Plan</h4>
+            <p><strong>Password ends with:</strong></p>
+            <div class="password-example">@_2211</div>
+            <p><strong>Examples:</strong> company@_2211, projectX@_2211</p>
+            <p><strong>Access:</strong> Unlimited requests</p>
+            <p><strong>Response Time:</strong> Within 24 hours</p>
           </div>
         </div>
       </div>
@@ -228,11 +295,23 @@
       </div>
     </div>
 
+    <!-- Loading Spinner -->
+    <div class="loading hidden" id="loadingSpinner">
+      <div class="spinner"></div>
+      <p>Sending your request to our engineers...</p>
+    </div>
+
     <!-- Success Message (Initially Hidden) -->
     <div class="message success hidden" id="successMessage">
-      <h3>Request Submitted Successfully!</h3>
+      <h3>✅ Request Submitted Successfully!</h3>
       <p id="confirmationText">An engineer may contact you within 4 days.</p>
       <p>Thank you for using CodeGoldenAI services.</p>
+    </div>
+
+    <!-- Error Message (Initially Hidden) -->
+    <div class="message error hidden" id="errorMessage">
+      <h3>❌ Error Sending Request</h3>
+      <p id="errorText">There was an error sending your request. Please try again or contact us directly at codingengineer288@gmail.com</p>
     </div>
   </div>
 
@@ -249,7 +328,7 @@
       'plus': {
         password: null,
         maxRequests: 5,
-        resetDays: null, // No time reset, just count
+        resetDays: null,
         responseTime: '2 days',
         passwordEnd: '444212'
       },
@@ -302,7 +381,6 @@
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
         
         if (diffDays >= planConfig.resetDays) {
-          // Reset the count
           updateUserData(plan, 0, null);
           return true;
         }
@@ -341,34 +419,17 @@
       return null;
     }
 
-    // Send email using Formspree or similar service
+    // Send email using a simple mailto link as fallback
     function sendEmail(plan, requestDetails) {
-      // In a real implementation, you would use a service like Formspree, EmailJS, or a backend
-      // For this example, we'll simulate the email sending
+      const subject = `CodeGoldenAI Engineer Request - ${plan.toUpperCase()} Plan`;
+      const body = `Plan: ${plan}\nPassword: ${getPlanPassword(plan)}\n\nRequest Details:\n${requestDetails}`;
       
-      const emailData = {
-        to: 'codingengineer288@gmail.com',
-        subject: `CodeGoldenAI Engineer Request - ${plan.toUpperCase()} Plan`,
-        message: `Plan: ${plan}\nPassword: ${getPlanPassword(plan)}\n\nRequest Details:\n${requestDetails}`
-      };
+      // Create a mailto link
+      const mailtoLink = `mailto:codingengineer288@gmail.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
       
-      // Simulate API call - replace with actual email service integration
-      console.log('Sending email to engineer:', emailData);
-      
-      // For a real implementation, you would use something like:
-      // fetch('https://formspree.io/f/your-form-id', {
-      //   method: 'POST',
-      //   headers: {
-      //     'Content-Type': 'application/json',
-      //   },
-      //   body: JSON.stringify({
-      //     email: 'codingengineer288@gmail.com',
-      //     subject: `CodeGoldenAI Engineer Request - ${plan.toUpperCase()} Plan`,
-      //     message: `Plan: ${plan}\nPassword: ${getPlanPassword(plan)}\n\nRequest Details:\n${requestDetails}`
-      //   })
-      // });
-      
-      return true; // Simulate success
+      // Open the user's email client
+      window.location.href = mailtoLink;
+      return true;
     }
 
     // Get the password for the plan to include in the email
@@ -383,6 +444,8 @@
     const passwordSection = document.getElementById('passwordSection');
     const requestSection = document.getElementById('requestSection');
     const successMessage = document.getElementById('successMessage');
+    const errorMessage = document.getElementById('errorMessage');
+    const loadingSpinner = document.getElementById('loadingSpinner');
     const passwordInput = document.getElementById('passwordInput');
     const submitPassword = document.getElementById('submitPassword');
     const passwordError = document.getElementById('passwordError');
@@ -392,6 +455,7 @@
     const requestsRemaining = document.getElementById('requestsRemaining');
     const responseDays = document.getElementById('responseDays');
     const confirmationText = document.getElementById('confirmationText');
+    const errorText = document.getElementById('errorText');
     const usageText = document.getElementById('usageText');
 
     // Current user plan (set after password validation)
@@ -408,7 +472,7 @@
         
         if (plan) {
           currentPlan = plan;
-          passwordError.style.display = 'none';
+          passwordError.classList.add('hidden');
           
           // Check if user can make a request
           if (canMakeRequest(plan)) {
@@ -429,11 +493,11 @@
           } else {
             // User cannot make more requests
             passwordError.textContent = `You have reached the maximum number of requests for your ${plan} plan.`;
-            passwordError.style.display = 'block';
+            passwordError.classList.remove('hidden');
           }
         } else {
           // Invalid password
-          passwordError.style.display = 'block';
+          passwordError.classList.remove('hidden');
         }
       });
       
@@ -448,29 +512,39 @@
           return;
         }
         
+        // Show loading spinner
+        requestSection.classList.add('hidden');
+        loadingSpinner.classList.remove('hidden');
+        
         // Disable the button to prevent multiple submissions
         submitRequest.disabled = true;
-        submitRequest.textContent = 'Sending...';
         
-        // Send the email
-        const emailSent = sendEmail(currentPlan, details);
-        
-        if (emailSent) {
-          // Update user data
-          const userData = getUserData();
-          const planData = userData[currentPlan];
-          const newRequestCount = planData.requests + 1;
-          updateUserData(currentPlan, newRequestCount, new Date().toISOString());
-          
-          // Show success message
-          requestSection.classList.add('hidden');
-          confirmationText.textContent = `An engineer may contact you within ${plans[currentPlan].responseTime}.`;
-          successMessage.classList.remove('hidden');
-        } else {
-          alert('There was an error sending your request. Please try again.');
-          submitRequest.disabled = false;
-          submitRequest.textContent = 'Contact Engineer';
-        }
+        // Send the email after a short delay to show loading state
+        setTimeout(function() {
+          try {
+            const emailSent = sendEmail(currentPlan, details);
+            
+            if (emailSent) {
+              // Update user data
+              const userData = getUserData();
+              const planData = userData[currentPlan];
+              const newRequestCount = planData.requests + 1;
+              updateUserData(currentPlan, newRequestCount, new Date().toISOString());
+              
+              // Show success message
+              loadingSpinner.classList.add('hidden');
+              confirmationText.textContent = `An engineer may contact you within ${plans[currentPlan].responseTime}.`;
+              successMessage.classList.remove('hidden');
+            } else {
+              throw new Error('Email sending failed');
+            }
+          } catch (error) {
+            // Show error message
+            loadingSpinner.classList.add('hidden');
+            errorText.textContent = 'There was an error sending your request. Please try again or contact us directly at codingengineer288@gmail.com';
+            errorMessage.classList.remove('hidden');
+          }
+        }, 1500); // 1.5 second delay to show loading state
       });
       
       // Allow Enter key to submit password
