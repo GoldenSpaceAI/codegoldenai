@@ -5,122 +5,286 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Plans • CodeGoldenAI</title>
   <style>
+    :root {
+      --primary: #f6c64a;
+      --secondary: #eb8b36;
+      --dark: #222;
+      --light: #f7fafc;
+      --gray: #444;
+    }
+    
     body {
       margin: 0;
       font-family: "Segoe UI", sans-serif;
-      background: #f7fafc;
-      color: #222;
+      background: var(--light);
+      color: var(--dark);
+      line-height: 1.6;
     }
+    
     header {
-      background: linear-gradient(45deg, #f6c64a, #eb8b36);
+      background: linear-gradient(45deg, var(--primary), var(--secondary));
       color: white;
       text-align: center;
-      padding: 1.5rem;
-      font-size: 1.6rem;
+      padding: 1.8rem 1.5rem;
+      font-size: 1.8rem;
       font-weight: bold;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
     }
+    
     main {
-      max-width: 1100px;
-      margin: 2rem auto;
-      padding: 0 1rem;
+      max-width: 1200px;
+      margin: 3rem auto;
+      padding: 0 1.5rem;
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-      gap: 2rem;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 2.5rem;
     }
+    
     .plan {
       background: #fff;
       border-radius: 16px;
       box-shadow: 0 10px 30px rgba(0,0,0,0.08);
-      padding: 2rem;
+      padding: 2.5rem 2rem;
       text-align: center;
-      transition: transform .3s;
+      transition: transform 0.3s, box-shadow 0.3s;
+      display: flex;
+      flex-direction: column;
+      position: relative;
     }
-    .plan:hover { transform: translateY(-6px); }
+    
+    .plan:hover { 
+      transform: translateY(-8px); 
+      box-shadow: 0 15px 35px rgba(0,0,0,0.12);
+    }
+    
+    .plan.popular::before {
+      content: "Most Popular";
+      position: absolute;
+      top: -12px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--secondary);
+      color: white;
+      padding: 0.5rem 1.5rem;
+      border-radius: 20px;
+      font-size: 0.9rem;
+      font-weight: bold;
+    }
+    
     .plan h2 {
-      font-size: 1.6rem;
+      font-size: 1.8rem;
       margin-bottom: 0.5rem;
-      background: linear-gradient(45deg, #f6c64a, #eb8b36);
+      background: linear-gradient(45deg, var(--primary), var(--secondary));
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
     }
+    
     .price {
-      font-size: 2rem;
+      font-size: 2.2rem;
       font-weight: bold;
       margin: 1rem 0;
-      color: #222;
+      color: var(--dark);
     }
-    ul { list-style: none; padding: 0; margin: 1rem 0; }
-    ul li { margin: 0.5rem 0; color: #444; }
-    .wallet {
-      margin-top: 1rem;
-      font-size: 0.9rem;
-      color: #333;
-      word-break: break-all;
-      padding: 0.5rem;
-      background: #f1f1f1;
-      border-radius: 8px;
+    
+    .price-period {
+      font-size: 1rem;
+      color: var(--gray);
+      font-weight: normal;
     }
-    .note {
-      margin-top: 1rem;
-      font-size: 0.95rem;
-      color: #555;
+    
+    ul { 
+      list-style: none; 
+      padding: 0; 
+      margin: 1.5rem 0;
       text-align: left;
+    }
+    
+    ul li { 
+      margin: 0.8rem 0; 
+      color: var(--gray);
+      padding-left: 1.5rem;
+      position: relative;
+    }
+    
+    ul li::before {
+      content: "✓";
+      position: absolute;
+      left: 0;
+      color: #10b981;
+      font-weight: bold;
+    }
+    
+    .btn {
+      display: inline-block;
+      background: linear-gradient(45deg, var(--primary), var(--secondary));
+      color: white;
+      padding: 0.8rem 1.5rem;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: bold;
+      margin-top: auto;
+      transition: all 0.3s;
+      border: none;
+      cursor: pointer;
+      font-size: 1rem;
+    }
+    
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(235, 139, 54, 0.3);
+    }
+    
+    .btn-free {
+      background: #e5e7eb;
+      color: var(--dark);
+    }
+    
+    .btn-free:hover {
+      background: #d1d5db;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+    
+    .payment-info {
+      margin-top: 1.5rem;
+      padding: 1.2rem;
+      background: #f8f9fa;
+      border-radius: 10px;
+      text-align: left;
+      font-size: 0.9rem;
+    }
+    
+    .payment-info h3 {
+      margin-top: 0;
+      font-size: 1.1rem;
+      color: var(--dark);
+    }
+    
+    .wallet-address {
+      font-family: monospace;
+      background: #e9ecef;
+      padding: 0.8rem;
+      border-radius: 6px;
+      word-break: break-all;
+      margin: 0.8rem 0;
+      font-size: 0.85rem;
+      border: 1px dashed #adb5bd;
+    }
+    
+    .contact-link {
+      color: var(--secondary);
+      text-decoration: none;
+      font-weight: bold;
+    }
+    
+    .contact-link:hover {
+      text-decoration: underline;
+    }
+    
+    .guarantee {
+      margin-top: 1rem;
+      font-style: italic;
+      color: #6b7280;
+      font-size: 0.9rem;
+    }
+    
+    @media (max-width: 768px) {
+      main {
+        grid-template-columns: 1fr;
+        gap: 2rem;
+      }
+      
+      header {
+        font-size: 1.5rem;
+        padding: 1.2rem 1rem;
+      }
     }
   </style>
 </head>
 <body>
-  <header>💳 Choose Your Plan</header>
+  <header>💳 Choose Your CodeGoldenAI Plan</header>
 
   <main>
     <!-- Free Plan -->
     <div class="plan">
       <h2>Free</h2>
-      <div class="price">0 USDT / month</div>
+      <div class="price">0 <span class="price-period">USDT / month</span></div>
       <ul>
-        <li>✅ Access AI Playground</li>
-        <li>✅ Simple Website Generator</li>
+        <li>Access AI Playground</li>
+        <li>Simple Website Generator</li>
+        <li>1 Basic Website Export</li>
+        <li>Community Support</li>
       </ul>
-      <p><strong>Already Active</strong></p>
+      <a href="#" class="btn btn-free">Get Started Now</a>
+      <p class="guarantee">No payment required</p>
     </div>
 
     <!-- Plus Plan -->
-    <div class="plan">
+    <div class="plan popular">
       <h2>Plus</h2>
-      <div class="price">5 USDT / month</div>
+      <div class="price">5 <span class="price-period">USDT / month</span></div>
       <ul>
-        <li>✅ Simple Website Generator</li>
-        <li>✅ Advanced Website Generator</li>
+        <li>Everything in Free</li>
+        <li>Advanced AI Website Generator</li>
+        <li>5 Premium Websites Monthly</li>
+        <li>25+ Professional Templates</li>
+        <li>Mobile-Optimized Designs</li>
+        <li>Email Support</li>
       </ul>
-
-      <div class="note">
-        <p><strong>Steps:</strong></p>
-        <p>1️⃣ Send <strong>5 USDT (TRC20)</strong> to this wallet address:</p>
-        <div class="wallet"><strong>TCN6eVtHFNtPAJNfebgGGm8c2h71NWYY9P</strong></div>
-        <p>2️⃣ Email your payment receipt (screenshot) to <a href="mailto:goldenspaceais@gmail.com">goldenspaceais@gmail.com</a></p>
-
-        <p style="margin-top:0.8rem;"><em>Once you have submitted your receipt on the account goldenspaceais@gmail.com, I will send you the password to unlock <strong>AdvancedAI</strong>.</em></p>
+      <a href="mailto:goldenspaceais@gmail.com?subject=Upgrade to Plus Plan" class="btn">Upgrade to Plus</a>
+      
+      <div class="payment-info">
+        <h3>How to Upgrade:</h3>
+        <p>1. Email us at <a href="mailto:goldenspaceais@gmail.com" class="contact-link">goldenspaceais@gmail.com</a></p>
+        <p>2. We'll send you payment instructions</p>
+        <p>3. Receive instant access after payment</p>
       </div>
     </div>
 
     <!-- Pro Plan -->
     <div class="plan">
       <h2>Pro</h2>
-      <div class="price">20 USDT / month</div>
+      <div class="price">20 <span class="price-period">USDT / month</span></div>
       <ul>
-        <li>✅ Unlimited Playground Access</li>
-        <li>✅ Simple & Advanced Generators</li>
-        <li>✅ Priority Engineer Support</li>
+        <li>Everything in Plus</li>
+        <li>Unlimited Website Generations</li>
+        <li>Priority Engineer Support</li>
+        <li>Custom Code Editing</li>
+        <li>SEO Optimization Setup</li>
+        <li>White-label Options</li>
       </ul>
-
-      <div class="note">
-        <p><strong>Steps:</strong></p>
-        <p>1️⃣ Send <strong>20 USDT (TRC20)</strong> to this wallet address:</p>
-        <div class="wallet"><strong>TCN6eVtHFNtPAJNfebgGGm8c2h71NWYY9P</strong></div>
-        <p>2️⃣ Email your payment receipt (screenshot) to <a href="mailto:goldenspaceais@gmail.com">goldenspaceais@gmail.com</a></p>
-
-        <p style="margin-top:0.8rem;"><em>Once you have submitted your receipt on the  account goldenspaceais@gmail.com, you will be sent the password to unlock <strong>AdvancedAI</strong> and <strong>Engineer</strong> and </strong>Ultra AI</strong>.</em></p>
+      <a href="mailto:goldenspaceais@gmail.com?subject=Upgrade to Pro Plan" class="btn">Go Pro</a>
+      
+      <div class="payment-info">
+        <h3>How to Upgrade:</h3>
+        <p>1. Contact us for Pro access at <a href="mailto:goldenspaceais@gmail.com" class="contact-link">goldenspaceais@gmail.com</a></p>
+        <p>2. We'll set up your account immediately</p>
+        <p>3. Dedicated support from day one</p>
       </div>
+      <p class="guarantee">30-day satisfaction guarantee</p>
     </div>
   </main>
+
+  <script>
+    // Simple animation for plan cards when they come into view
+    document.addEventListener('DOMContentLoaded', function() {
+      const plans = document.querySelectorAll('.plan');
+      
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            entry.target.style.opacity = 1;
+            entry.target.style.transform = 'translateY(0)';
+          }
+        });
+      }, { threshold: 0.1 });
+      
+      plans.forEach(plan => {
+        plan.style.opacity = 0;
+        plan.style.transform = 'translateY(20px)';
+        plan.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+        observer.observe(plan);
+      });
+    });
+  </script>
 </body>
 </html>
