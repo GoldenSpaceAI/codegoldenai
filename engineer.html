@@ -3,112 +3,483 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Hire Engineer • CodeGoldenAI</title>
+  <title>Engineer Access • CodeGoldenAI</title>
   <style>
+    :root {
+      --primary: #f6c64a;
+      --secondary: #eb8b36;
+      --dark: #222;
+      --light: #f7fafc;
+      --gray: #444;
+    }
+    
     body {
-      font-family: "Segoe UI", sans-serif;
-      background: #f7fafc;
       margin: 0;
-      padding: 0;
-      color: #222;
+      font-family: "Segoe UI", sans-serif;
+      background: var(--light);
+      color: var(--dark);
+      line-height: 1.6;
     }
+    
     header {
-      background: linear-gradient(45deg, #f6c64a, #eb8b36);
-      padding: 1rem;
-      text-align: center;
-      font-weight: bold;
-      font-size: 1.4rem;
+      background: linear-gradient(45deg, var(--primary), var(--secondary));
       color: white;
-    }
-    main {
-      max-width: 700px;
-      margin: 2rem auto;
-      padding: 2rem;
-      background: white;
-      border-radius: 12px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
       text-align: center;
+      padding: 1.8rem 1.5rem;
+      font-size: 1.8rem;
+      font-weight: bold;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
     }
+    
+    .container {
+      max-width: 800px;
+      margin: 3rem auto;
+      padding: 0 1.5rem;
+    }
+    
+    .card {
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+      padding: 2.5rem;
+      margin-bottom: 2rem;
+    }
+    
     h2 {
-      margin-bottom: 1rem;
-      background: linear-gradient(45deg,#f6c64a,#eb8b36);
+      color: var(--dark);
+      margin-top: 0;
+      background: linear-gradient(45deg, var(--primary), var(--secondary));
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
     }
-    p {
-      margin-bottom: 1.5rem;
-      color: #444;
+    
+    .password-form {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      margin-top: 1.5rem;
     }
-    input[type="password"] {
-      padding: 0.7rem;
-      border: 1px solid #ccc;
+    
+    input, textarea {
+      padding: 0.8rem 1rem;
+      border: 1px solid #ddd;
       border-radius: 8px;
       font-size: 1rem;
-      width: 70%;
-      margin-bottom: 1rem;
+      font-family: "Segoe UI", sans-serif;
     }
+    
+    textarea {
+      min-height: 150px;
+      resize: vertical;
+    }
+    
     .btn {
       display: inline-block;
-      padding: 0.9rem 1.5rem;
-      border-radius: 10px;
-      background: linear-gradient(45deg,#f6c64a,#eb8b36);
+      background: linear-gradient(45deg, var(--primary), var(--secondary));
       color: white;
-      font-weight: bold;
-      font-size: 1rem;
-      cursor: pointer;
+      padding: 0.8rem 1.5rem;
+      border-radius: 8px;
       text-decoration: none;
+      font-weight: bold;
+      transition: all 0.3s;
       border: none;
+      cursor: pointer;
+      font-size: 1rem;
+      text-align: center;
     }
-    .btn:hover { opacity: 0.9; }
+    
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(235, 139, 54, 0.3);
+    }
+    
+    .btn:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+    
+    .message {
+      padding: 1rem;
+      border-radius: 8px;
+      margin: 1rem 0;
+      display: none;
+    }
+    
+    .success {
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+    
+    .error {
+      background: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+    
+    .info {
+      background: #d1ecf1;
+      color: #0c5460;
+      border: 1px solid #bee5eb;
+    }
+    
     .hidden {
       display: none;
     }
-    .error {
-      margin-top: 0.5rem;
-      color: red;
-      font-weight: bold;
+    
+    .plan-info {
+      background: #f8f9fa;
+      padding: 1.5rem;
+      border-radius: 10px;
+      margin-top: 1.5rem;
+    }
+    
+    .plan-info h3 {
+      margin-top: 0;
+      color: var(--dark);
+    }
+    
+    .plan-details {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+    
+    .plan-card {
+      background: white;
+      padding: 1rem;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    }
+    
+    .plan-card h4 {
+      margin-top: 0;
+      color: var(--secondary);
+    }
+    
+    .usage-info {
+      margin-top: 1.5rem;
+      font-size: 0.9rem;
+      color: var(--gray);
     }
   </style>
 </head>
 <body>
-  <header>👨‍💻 Hire Engineer</header>
-  <main>
-    <!-- Password Gate -->
-    <div id="lock-screen">
-      <h2>🔒 Enter Password</h2>
-      <p>Please enter your password to unlock this feature.<br>
-      If you don’t have a password, please upgrade your plan to get one.</p>
-      <input type="password" id="passwordInput" placeholder="Enter password here">
-      <br>
-      <button class="btn" onclick="checkPassword()">Unlock</button>
-      <div id="errorMsg" class="error hidden">❌ Incorrect password. Try again.</div>
+  <header>🔧 Engineer Access • CodeGoldenAI</header>
+
+  <div class="container">
+    <!-- Password Entry Section -->
+    <div class="card" id="passwordSection">
+      <h2>Access Engineering Support</h2>
+      <p>Enter your plan password to unlock engineer access:</p>
+      
+      <div class="password-form">
+        <input type="password" id="passwordInput" placeholder="Enter your plan password">
+        <button class="btn" id="submitPassword">Unlock Engineer Access</button>
+      </div>
+      
+      <div class="message error" id="passwordError">
+        Invalid password. Please check your plan password and try again.
+      </div>
+      
+      <div class="plan-info">
+        <h3>Plan Passwords</h3>
+        <div class="plan-details">
+          <div class="plan-card">
+            <h4>Free Plan</h4>
+            <p>Password: <strong>0000</strong></p>
+            <p>1 request per month</p>
+            <p>Response within 4 days</p>
+          </div>
+          <div class="plan-card">
+            <h4>Plus Plan</h4>
+            <p>Password ends with: <strong>444212</strong></p>
+            <p>5 requests available</p>
+            <p>Response within 2 days</p>
+          </div>
+          <div class="plan-card">
+            <h4>Pro Plan</h4>
+            <p>Password ends with: <strong>@_2211</strong></p>
+            <p>Unlimited requests</p>
+            <p>Response within 24 hours</p>
+          </div>
+        </div>
+      </div>
     </div>
 
-    <!-- Hidden Contact Form -->
-    <div id="unlocked-content" class="hidden">
-      <h2>Describe Your Project</h2>
-      <p>
-        Whether it’s AI, Education, or a Simple Website — tell us about your project.  
-        Click below to send your request. Attach details and we’ll get back to you.  
-      </p>
-      <a class="btn" href="mailto:goldenspaceais@gmail.com?subject=Engineer%20Request&body=Hello,%20I%20would%20like%20to%20hire%20an%20engineer%20for%20my%20project.%0A%0AType:%20(AI/Education/Simple%20Website)%0ADescription:%20(please%20write%20here)">
-        📩 Contact Engineer
-      </a>
+    <!-- Engineer Request Form (Initially Hidden) -->
+    <div class="card hidden" id="requestSection">
+      <h2>Contact an Engineer</h2>
+      <p>Describe your application or technical issue in detail:</p>
+      
+      <form id="engineerForm">
+        <div class="password-form">
+          <textarea id="requestDetails" placeholder="Please describe your application, technical requirements, or the issue you're facing..."></textarea>
+          <button type="submit" class="btn" id="submitRequest">Contact Engineer</button>
+        </div>
+      </form>
+      
+      <div class="usage-info">
+        <p id="usageText">Requests remaining: <span id="requestsRemaining">-</span></p>
+        <p id="responseTime">Expected response time: <span id="responseDays">-</span></p>
+      </div>
     </div>
-  </main>
+
+    <!-- Success Message (Initially Hidden) -->
+    <div class="message success hidden" id="successMessage">
+      <h3>Request Submitted Successfully!</h3>
+      <p id="confirmationText">An engineer may contact you within 4 days.</p>
+      <p>Thank you for using CodeGoldenAI services.</p>
+    </div>
+  </div>
 
   <script>
-    function checkPassword() {
-      const input = document.getElementById("passwordInput").value.trim();
-      const lastSix = input.slice(-6);
+    // Plan configurations
+    const plans = {
+      'free': {
+        password: '0000',
+        maxRequests: 1,
+        resetDays: 30,
+        responseTime: '4 days',
+        passwordEnd: null
+      },
+      'plus': {
+        password: null,
+        maxRequests: 5,
+        resetDays: null, // No time reset, just count
+        responseTime: '2 days',
+        passwordEnd: '444212'
+      },
+      'pro': {
+        password: null,
+        maxRequests: Infinity,
+        resetDays: null,
+        responseTime: '24 hours',
+        passwordEnd: '@_2211'
+      }
+    };
 
-      if (lastSix === "666555") {
-        document.getElementById("lock-screen").classList.add("hidden");
-        document.getElementById("unlocked-content").classList.remove("hidden");
-      } else {
-        document.getElementById("errorMsg").classList.remove("hidden");
+    // Initialize user data in localStorage if not exists
+    function initUserData() {
+      if (!localStorage.getItem('codegoldenai_engineer_access')) {
+        const userData = {
+          free: { requests: 0, lastRequest: null },
+          plus: { requests: 0, lastRequest: null },
+          pro: { requests: 0, lastRequest: null }
+        };
+        localStorage.setItem('codegoldenai_engineer_access', JSON.stringify(userData));
       }
     }
+
+    // Get user data from localStorage
+    function getUserData() {
+      return JSON.parse(localStorage.getItem('codegoldenai_engineer_access'));
+    }
+
+    // Update user data in localStorage
+    function updateUserData(plan, requests, lastRequest) {
+      const userData = getUserData();
+      userData[plan] = { requests, lastRequest };
+      localStorage.setItem('codegoldenai_engineer_access', JSON.stringify(userData));
+    }
+
+    // Check if user can make a request for the given plan
+    function canMakeRequest(plan) {
+      const userData = getUserData();
+      const planData = userData[plan];
+      const planConfig = plans[plan];
+      
+      if (planConfig.maxRequests === Infinity) return true;
+      
+      // Check if we need to reset the count (for free plan)
+      if (plan === 'free' && planData.lastRequest) {
+        const lastRequestDate = new Date(planData.lastRequest);
+        const currentDate = new Date();
+        const diffTime = Math.abs(currentDate - lastRequestDate);
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        
+        if (diffDays >= planConfig.resetDays) {
+          // Reset the count
+          updateUserData(plan, 0, null);
+          return true;
+        }
+      }
+      
+      return planData.requests < planConfig.maxRequests;
+    }
+
+    // Get remaining requests for a plan
+    function getRemainingRequests(plan) {
+      const userData = getUserData();
+      const planData = userData[plan];
+      const planConfig = plans[plan];
+      
+      if (planConfig.maxRequests === Infinity) return 'Unlimited';
+      
+      if (plan === 'free' && planData.lastRequest) {
+        const lastRequestDate = new Date(planData.lastRequest);
+        const currentDate = new Date();
+        const diffTime = Math.abs(currentDate - lastRequestDate);
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        
+        if (diffDays >= planConfig.resetDays) {
+          return planConfig.maxRequests;
+        }
+      }
+      
+      return planConfig.maxRequests - planData.requests;
+    }
+
+    // Validate password and return plan type
+    function validatePassword(password) {
+      if (password === plans.free.password) return 'free';
+      if (plans.plus.passwordEnd && password.endsWith(plans.plus.passwordEnd)) return 'plus';
+      if (plans.pro.passwordEnd && password.endsWith(plans.pro.passwordEnd)) return 'pro';
+      return null;
+    }
+
+    // Send email using Formspree or similar service
+    function sendEmail(plan, requestDetails) {
+      // In a real implementation, you would use a service like Formspree, EmailJS, or a backend
+      // For this example, we'll simulate the email sending
+      
+      const emailData = {
+        to: 'codingengineer288@gmail.com',
+        subject: `CodeGoldenAI Engineer Request - ${plan.toUpperCase()} Plan`,
+        message: `Plan: ${plan}\nPassword: ${getPlanPassword(plan)}\n\nRequest Details:\n${requestDetails}`
+      };
+      
+      // Simulate API call - replace with actual email service integration
+      console.log('Sending email to engineer:', emailData);
+      
+      // For a real implementation, you would use something like:
+      // fetch('https://formspree.io/f/your-form-id', {
+      //   method: 'POST',
+      //   headers: {
+      //     'Content-Type': 'application/json',
+      //   },
+      //   body: JSON.stringify({
+      //     email: 'codingengineer288@gmail.com',
+      //     subject: `CodeGoldenAI Engineer Request - ${plan.toUpperCase()} Plan`,
+      //     message: `Plan: ${plan}\nPassword: ${getPlanPassword(plan)}\n\nRequest Details:\n${requestDetails}`
+      //   })
+      // });
+      
+      return true; // Simulate success
+    }
+
+    // Get the password for the plan to include in the email
+    function getPlanPassword(plan) {
+      if (plan === 'free') return '0000';
+      if (plan === 'plus') return 'ends with 444212';
+      if (plan === 'pro') return 'ends with @_2211';
+      return 'Unknown';
+    }
+
+    // DOM elements
+    const passwordSection = document.getElementById('passwordSection');
+    const requestSection = document.getElementById('requestSection');
+    const successMessage = document.getElementById('successMessage');
+    const passwordInput = document.getElementById('passwordInput');
+    const submitPassword = document.getElementById('submitPassword');
+    const passwordError = document.getElementById('passwordError');
+    const engineerForm = document.getElementById('engineerForm');
+    const requestDetails = document.getElementById('requestDetails');
+    const submitRequest = document.getElementById('submitRequest');
+    const requestsRemaining = document.getElementById('requestsRemaining');
+    const responseDays = document.getElementById('responseDays');
+    const confirmationText = document.getElementById('confirmationText');
+    const usageText = document.getElementById('usageText');
+
+    // Current user plan (set after password validation)
+    let currentPlan = null;
+
+    // Initialize the page
+    document.addEventListener('DOMContentLoaded', function() {
+      initUserData();
+      
+      // Password submission
+      submitPassword.addEventListener('click', function() {
+        const password = passwordInput.value.trim();
+        const plan = validatePassword(password);
+        
+        if (plan) {
+          currentPlan = plan;
+          passwordError.style.display = 'none';
+          
+          // Check if user can make a request
+          if (canMakeRequest(plan)) {
+            // Show the request form
+            passwordSection.classList.add('hidden');
+            requestSection.classList.remove('hidden');
+            
+            // Update the UI with plan-specific information
+            requestsRemaining.textContent = getRemainingRequests(plan);
+            responseDays.textContent = plans[plan].responseTime;
+            
+            // Update usage text based on plan
+            if (plan === 'pro') {
+              usageText.innerHTML = 'Requests remaining: <strong>Unlimited</strong>';
+            } else {
+              usageText.innerHTML = `Requests remaining: <strong>${getRemainingRequests(plan)}</strong>`;
+            }
+          } else {
+            // User cannot make more requests
+            passwordError.textContent = `You have reached the maximum number of requests for your ${plan} plan.`;
+            passwordError.style.display = 'block';
+          }
+        } else {
+          // Invalid password
+          passwordError.style.display = 'block';
+        }
+      });
+      
+      // Engineer request form submission
+      engineerForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const details = requestDetails.value.trim();
+        
+        if (details.length < 10) {
+          alert('Please provide more details about your request (at least 10 characters).');
+          return;
+        }
+        
+        // Disable the button to prevent multiple submissions
+        submitRequest.disabled = true;
+        submitRequest.textContent = 'Sending...';
+        
+        // Send the email
+        const emailSent = sendEmail(currentPlan, details);
+        
+        if (emailSent) {
+          // Update user data
+          const userData = getUserData();
+          const planData = userData[currentPlan];
+          const newRequestCount = planData.requests + 1;
+          updateUserData(currentPlan, newRequestCount, new Date().toISOString());
+          
+          // Show success message
+          requestSection.classList.add('hidden');
+          confirmationText.textContent = `An engineer may contact you within ${plans[currentPlan].responseTime}.`;
+          successMessage.classList.remove('hidden');
+        } else {
+          alert('There was an error sending your request. Please try again.');
+          submitRequest.disabled = false;
+          submitRequest.textContent = 'Contact Engineer';
+        }
+      });
+      
+      // Allow Enter key to submit password
+      passwordInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+          submitPassword.click();
+        }
+      });
+    });
   </script>
 </body>
 </html>
