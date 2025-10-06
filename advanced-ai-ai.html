@@ -114,7 +114,15 @@
             transition: all 0.2s;
             display: flex;
             align-items: center;
+            justify-content: space-between;
+            position: relative;
+        }
+
+        .chat-item-content {
+            display: flex;
+            align-items: center;
             gap: 10px;
+            flex: 1;
         }
 
         .chat-item:hover {
@@ -127,6 +135,26 @@
 
         .chat-item i {
             color: var(--gray);
+        }
+
+        .delete-chat-btn {
+            background: none;
+            border: none;
+            color: var(--gray);
+            cursor: pointer;
+            padding: 5px;
+            border-radius: 4px;
+            opacity: 0;
+            transition: all 0.2s;
+        }
+
+        .chat-item:hover .delete-chat-btn {
+            opacity: 1;
+        }
+
+        .delete-chat-btn:hover {
+            color: var(--warning);
+            background: rgba(247, 37, 133, 0.1);
         }
 
         .main-content {
@@ -529,6 +557,11 @@
             color: var(--light);
         }
 
+        .modal-btn.danger {
+            background: var(--warning);
+            color: white;
+        }
+
         /* Scrollbar styling */
         ::-webkit-scrollbar {
             width: 6px;
@@ -636,6 +669,18 @@
         </div>
     </div>
 
+    <!-- Delete Chat Confirmation Modal -->
+    <div class="modal" id="deleteChatModal">
+        <div class="modal-content">
+            <h3><i class="fas fa-trash"></i> Delete Chat</h3>
+            <p style="margin-bottom: 15px;">Are you sure you want to delete this chat? This action cannot be undone.</p>
+            <div class="modal-buttons">
+                <button class="modal-btn secondary" id="cancelDelete">Cancel</button>
+                <button class="modal-btn danger" id="confirmDelete">Delete Chat</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Hidden file input for image upload -->
     <input type="file" id="fileInput" class="file-input" accept="image/*">
 
@@ -649,9 +694,12 @@
         const newChatBtn = document.getElementById('newChatBtn');
         const customInstructionsBtn = document.getElementById('customInstructionsBtn');
         const customInstructionsModal = document.getElementById('customInstructionsModal');
+        const deleteChatModal = document.getElementById('deleteChatModal');
         const instructionsInput = document.getElementById('instructionsInput');
         const saveInstructionsBtn = document.getElementById('saveInstructions');
         const cancelInstructionsBtn = document.getElementById('cancelInstructions');
+        const cancelDeleteBtn = document.getElementById('cancelDelete');
+        const confirmDeleteBtn = document.getElementById('confirmDelete');
         const modelButtons = document.querySelectorAll('.model-btn');
         const imageGenBtn = document.getElementById('imageGenBtn');
         const deepSearchBtn = document.getElementById('deepSearchBtn');
@@ -666,6 +714,7 @@
         let chats = JSON.parse(localStorage.getItem('aiChats')) || {};
         let customInstructions = localStorage.getItem('customInstructions') || '';
         let recognition = null;
+        let chatToDelete = null;
         
         // Model endpoints mapping
         const modelEndpoints = {
@@ -811,6 +860,36 @@
             cancelInstructionsBtn.addEventListener('click', () => {
                 customInstructionsModal.style.display = 'none';
             });
+
+            // Delete chat modal
+            cancelDeleteBtn.addEventListener('click', () => {
+                deleteChatModal.style.display = 'none';
+                chatToDelete = null;
+            });
+
+            confirmDeleteBtn.addEventListener('click', deleteChat);
+        }
+
+        // Delete chat function
+        function deleteChat() {
+            if (chatToDelete) {
+                delete chats[chatToDelete];
+                
+                // If we're deleting the current chat, switch to another one
+                if (currentChatId === chatToDelete) {
+                    const remainingChats = Object.keys(chats);
+                    if (remainingChats.length > 0) {
+                        loadChat(remainingChats[0]);
+                    } else {
+                        createNewChat();
+                    }
+                }
+                
+                saveChats();
+                loadChatHistory();
+                deleteChatModal.style.display = 'none';
+                chatToDelete = null;
+            }
         }
 
         // Load custom instructions
@@ -855,12 +934,28 @@
                 const chatItem = document.createElement('div');
                 chatItem.className = `chat-item ${chat.id === currentChatId ? 'active' : ''}`;
                 chatItem.innerHTML = `
-                    <i class="fas fa-comment"></i>
-                    <span>${chat.title}</span>
+                    <div class="chat-item-content">
+                        <i class="fas fa-comment"></i>
+                        <span>${chat.title}</span>
+                    </div>
+                    <button class="delete-chat-btn" data-chat-id="${chat.id}">
+                        <i class="fas fa-trash"></i>
+                    </button>
                 `;
                 
-                chatItem.addEventListener('click', () => {
-                    loadChat(chat.id);
+                // Chat selection
+                chatItem.addEventListener('click', (e) => {
+                    if (!e.target.closest('.delete-chat-btn')) {
+                        loadChat(chat.id);
+                    }
+                });
+                
+                // Delete button
+                const deleteBtn = chatItem.querySelector('.delete-chat-btn');
+                deleteBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    chatToDelete = chat.id;
+                    deleteChatModal.style.display = 'flex';
                 });
                 
                 chatHistory.appendChild(chatItem);
