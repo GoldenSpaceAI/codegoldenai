@@ -6,6 +6,7 @@
     <title>Advanced AI Assistant</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        /* Your existing CSS remains exactly the same */
         :root {
             --primary: #4361ee;
             --secondary: #3f37c9;
@@ -454,10 +455,10 @@
         <div class="header">
             <h1>Advanced AI Assistant</h1>
             <div class="model-selector">
-                <button class="model-btn active">GPT-4.1</button>
-                <button class="model-btn">GPT-40 Mini</button>
-                <button class="model-btn">Gemini 2.5 Pro</button>
-                <button class="model-btn">Gemini Flash</button>
+                <button class="model-btn active" data-model="gpt-4.1">GPT-4.1</button>
+                <button class="model-btn" data-model="gpt-40-mini">GPT-40 Mini</button>
+                <button class="model-btn" data-model="gemini2.5-pro">Gemini 2.5 Pro</button>
+                <button class="model-btn" data-model="gemini-flash">Gemini Flash</button>
             </div>
         </div>
 
@@ -531,6 +532,14 @@
         let currentModel = 'gpt-4.1';
         let chats = JSON.parse(localStorage.getItem('aiChats')) || {};
         
+        // Model endpoints mapping
+        const modelEndpoints = {
+            'gpt-4.1': '/api/generate-gpt4.1',
+            'gpt-40-mini': '/api/generate-gpt40-mini',
+            'gemini2.5-pro': '/api/generate-gemini2.5-pro',
+            'gemini-flash': '/api/generate-gemini-flash'
+        };
+
         // Initialize the app
         function init() {
             loadChatHistory();
@@ -612,7 +621,10 @@
             document.querySelectorAll('.chat-item').forEach(item => {
                 item.classList.remove('active');
             });
-            document.querySelector(`.chat-item:nth-child(${Object.keys(chats).indexOf(chatId) + 1})`).classList.add('active');
+            const chatIndex = Array.from(chats.keys()).indexOf(chatId);
+            if (chatIndex >= 0) {
+                document.querySelectorAll('.chat-item')[chatIndex]?.classList.add('active');
+            }
             
             chatContainer.scrollTop = chatContainer.scrollHeight;
         }
@@ -621,7 +633,7 @@
         function updateModelButtons() {
             modelButtons.forEach(button => {
                 button.classList.remove('active');
-                if (button.textContent.toLowerCase().replace(/\s+/g, '-') === currentModel) {
+                if (button.dataset.model === currentModel) {
                     button.classList.add('active');
                 }
             });
@@ -719,8 +731,8 @@
             this.style.height = (this.scrollHeight) + 'px';
         });
 
-        // Send message function
-        function sendMessage() {
+        // Send message function - NOW CONNECTS TO REAL BACKEND
+        async function sendMessage() {
             const message = messageInput.value.trim();
             if (message === '') return;
 
@@ -732,12 +744,43 @@
             // Show typing indicator
             showTypingIndicator();
 
-            // Simulate AI response after delay
-            setTimeout(() => {
+            try {
+                // Get current chat messages for context
+                const currentMessages = chats[currentChatId].messages;
+                
+                // Prepare messages for API (convert to backend format)
+                const apiMessages = currentMessages.map(msg => ({
+                    role: msg.role === 'ai' ? 'assistant' : 'user',
+                    content: msg.content
+                }));
+
+                // Call the appropriate API endpoint based on selected model
+                const endpoint = modelEndpoints[currentModel];
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        messages: apiMessages,
+                        prompt: message // Fallback for some endpoints
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`API error: ${response.status}`);
+                }
+
+                const data = await response.json();
+                
                 removeTypingIndicator();
-                const aiResponse = generateAIResponse(message);
-                addMessageToChat(aiResponse, 'ai');
-            }, 1500);
+                addMessageToChat(data.text, 'ai');
+                
+            } catch (error) {
+                console.error('Error sending message:', error);
+                removeTypingIndicator();
+                addMessageToChat("Sorry, I encountered an error. Please try again.", 'ai');
+            }
         }
 
         // Add message to current chat
@@ -793,65 +836,47 @@
             }
         }
 
-        // Generate AI response based on user input
-        function generateAIResponse(userMessage) {
-            const lowerMessage = userMessage.toLowerCase();
-            
-            // Code generation response
-            if (lowerMessage.includes('code') || lowerMessage.includes('program') || lowerMessage.includes('function')) {
-                return `I can help you with that! Here's a sample code:\n\n\`\`\`python
-def fibonacci(n):
-    """Generate the first n Fibonacci numbers."""
-    fib_sequence = [0, 1]
-    for i in range(2, n):
-        fib_sequence.append(fib_sequence[i-1] + fib_sequence[i-2])
-    return fib_sequence[:n]
-
-# Example usage
-print(fibonacci(10))\n\`\`\`\nThis function generates the first n numbers in the Fibonacci sequence. Would you like me to explain any part of it or create a different solution?`;
-            }
-            
-            // Image generation response
-            if (lowerMessage.includes('image') || lowerMessage.includes('picture') || lowerMessage.includes('generate')) {
-                return `IMAGE:https://images.unsplash.com/photo-1682687220742-aba13b6e50ba?ixlib=rb-4.0.3&ixid=M3wxMjA3fDF8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80`;
-            }
-            
-            // Default responses
-            const responses = [
-                "I've processed your request and here's what I found...",
-                "Based on my analysis, I can provide the following information:",
-                "I've conducted a deep search on your topic and here are the results:",
-                "After reviewing available data, here's my response to your query:"
-            ];
-            
-            return responses[Math.floor(Math.random() * responses.length)] + " " + userMessage + " is an interesting topic. I can provide more detailed information if you'd like me to conduct a deeper search.";
-        }
-
         // Handle image upload
         uploadImageBtn.addEventListener('click', () => {
             fileInput.click();
         });
 
-        fileInput.addEventListener('change', (e) => {
+        fileInput.addEventListener('change', async (e) => {
             const file = e.target.files[0];
             if (file) {
-                // In a real implementation, you would upload the file to your server
-                // For this demo, we'll create a local URL
-                const imageUrl = URL.createObjectURL(file);
-                
-                // Add the image to the chat
-                addMessageToChat('', 'user', 'image', imageUrl);
-                
-                // Show typing indicator and AI response
-                showTypingIndicator();
-                
-                setTimeout(() => {
-                    removeTypingIndicator();
-                    addMessageToChat("I've received your image. I can analyze it and provide information or answer questions about it. What would you like to know?", 'ai');
-                }, 1500);
-                
-                // Reset file input
-                fileInput.value = '';
+                try {
+                    const formData = new FormData();
+                    formData.append('image', file);
+                    
+                    const response = await fetch('/api/upload-image', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error('Upload failed');
+                    }
+                    
+                    const data = await response.json();
+                    
+                    // Add the image to the chat
+                    addMessageToChat('', 'user', 'image', data.imageUrl);
+                    
+                    // Show typing indicator and AI response
+                    showTypingIndicator();
+                    
+                    setTimeout(() => {
+                        removeTypingIndicator();
+                        addMessageToChat("I've received your image. I can analyze it and provide information or answer questions about it. What would you like to know?", 'ai');
+                    }, 1500);
+                    
+                } catch (error) {
+                    console.error('Upload error:', error);
+                    alert('Failed to upload image. Please try again.');
+                } finally {
+                    // Reset file input
+                    fileInput.value = '';
+                }
             }
         });
 
@@ -917,14 +942,14 @@ print(fibonacci(10))\n\`\`\`\nThis function generates the first n numbers in the
             }
         });
 
-        // Model selection
+        // Model selection - NOW WORKING WITH BACKEND
         modelButtons.forEach(button => {
             button.addEventListener('click', () => {
                 modelButtons.forEach(btn => btn.classList.remove('active'));
                 button.classList.add('active');
                 
                 // Update current model
-                currentModel = button.textContent.toLowerCase().replace(/\s+/g, '-');
+                currentModel = button.dataset.model;
                 
                 // Update current chat model if there is one
                 if (currentChatId) {
