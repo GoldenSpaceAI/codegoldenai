@@ -685,6 +685,7 @@
                 loadChat(currentChatId || Object.keys(chats)[0]);
             }
             initSpeechRecognition();
+            setupEventListeners();
         }
 
         // Initialize speech recognition
@@ -714,6 +715,102 @@
             } else {
                 micButton.style.display = 'none';
             }
+        }
+
+        // Setup event listeners
+        function setupEventListeners() {
+            // Mic button
+            micButton.addEventListener('click', toggleRecording);
+            
+            // Send button and Enter key
+            sendButton.addEventListener('click', sendMessage);
+            messageInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                }
+            });
+            
+            // Auto-resize textarea
+            messageInput.addEventListener('input', function() {
+                this.style.height = 'auto';
+                this.style.height = (this.scrollHeight) + 'px';
+            });
+            
+            // Model selection
+            modelButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    modelButtons.forEach(btn => btn.classList.remove('active'));
+                    button.classList.add('active');
+                    currentModel = button.dataset.model;
+                    if (currentChatId) {
+                        chats[currentChatId].model = currentModel;
+                        saveChats();
+                    }
+                });
+            });
+            
+            // Feature buttons
+            deepSearchBtn.addEventListener('click', () => {
+                const message = messageInput.value.trim();
+                if (message === '') {
+                    alert('Please type your question first, then click Deep Search.');
+                    return;
+                }
+                isDeepSearchMode = true;
+                deepSearchBtn.classList.add('active');
+                sendMessage();
+            });
+            
+            imageGenBtn.addEventListener('click', () => {
+                const prompt = prompt('Describe the image you want to generate:');
+                if (prompt) {
+                    addMessageToChat(`Generate an image: ${prompt}`, 'user');
+                    showTypingIndicator();
+                    setTimeout(() => {
+                        removeTypingIndicator();
+                        // For demo - in production, this would call your image generation API
+                        const demoImages = [
+                            'https://images.unsplash.com/photo-1682687220742-aba13b6e50ba?ixlib=rb-4.0.3&ixid=M3wxMjA3fDF8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
+                            'https://images.unsplash.com/photo-1695758478666-0672b74a9fc6?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
+                            'https://images.unsplash.com/photo-1695653422714-d6f8cff4f3bd?ixlib=rb-4.0.3&ixid=M3wxMjA3fDF8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80'
+                        ];
+                        const randomImage = demoImages[Math.floor(Math.random() * demoImages.length)];
+                        addMessageToChat(`IMAGE:${randomImage}`, 'ai');
+                    }, 2000);
+                }
+            });
+            
+            uploadImageBtn.addEventListener('click', () => fileInput.click());
+            fileInput.addEventListener('change', handleImageUpload);
+            
+            // Chat management
+            newChatBtn.addEventListener('click', () => {
+                if (chatContainer.children.length > 1) {
+                    if (confirm('Start a new chat? Your current chat will be saved.')) {
+                        createNewChat();
+                    }
+                } else {
+                    createNewChat();
+                }
+            });
+            
+            // Custom instructions modal
+            customInstructionsBtn.addEventListener('click', () => {
+                instructionsInput.value = customInstructions;
+                customInstructionsModal.style.display = 'flex';
+            });
+            
+            saveInstructionsBtn.addEventListener('click', () => {
+                customInstructions = instructionsInput.value.trim();
+                localStorage.setItem('customInstructions', customInstructions);
+                customInstructionsModal.style.display = 'none';
+                alert('Custom instructions saved! The AI will now respond according to your preferences.');
+            });
+            
+            cancelInstructionsBtn.addEventListener('click', () => {
+                customInstructionsModal.style.display = 'none';
+            });
         }
 
         // Load custom instructions
@@ -932,12 +1029,6 @@
             }
         }
 
-        // Auto-resize textarea
-        messageInput.addEventListener('input', function() {
-            this.style.height = 'auto';
-            this.style.height = (this.scrollHeight) + 'px';
-        });
-
         // Send message function with smart memory management
         async function sendMessage() {
             const message = messageInput.value.trim();
@@ -1060,11 +1151,7 @@
         }
 
         // Handle image upload
-        uploadImageBtn.addEventListener('click', () => {
-            fileInput.click();
-        });
-
-        fileInput.addEventListener('change', async (e) => {
+        async function handleImageUpload(e) {
             const file = e.target.files[0];
             if (file) {
                 try {
@@ -1100,34 +1187,42 @@
                     fileInput.value = '';
                 }
             }
-        });
+        }
 
-        // Deep Search functionality
-        deepSearchBtn.addEventListener('click', () => {
-            const message = messageInput.value.trim();
-            if (message === '') {
-                alert('Please type your question first, then click Deep Search.');
-                return;
+        // Voice recording functions
+        function toggleRecording() {
+            if (!recognition) return;
+            
+            if (recognition.recording) {
+                stopRecording();
+            } else {
+                startRecording();
             }
+        }
 
-            isDeepSearchMode = true;
-            deepSearchBtn.classList.add('active');
-            sendMessage();
-        });
+        function startRecording() {
+            try {
+                recognition.start();
+                voiceIndicator.style.display = 'block';
+                micButton.innerHTML = '<i class="fas fa-square"></i>';
+                micButton.style.color = 'var(--warning)';
+                recognition.recording = true;
+            } catch (err) {
+                console.error('Error starting recording:', err);
+            }
+        }
 
-        // Image Generation functionality
-        imageGenBtn.addEventListener('click', () => {
-            const prompt = prompt('Describe the image you want to generate:');
-            if (prompt) {
-                addMessageToChat(`Generate an image: ${prompt}`, 'user');
-                
-                showTypingIndicator();
-                
-                setTimeout(() => {
-                    removeTypingIndicator();
-                    
-                    // For demo - in production, this would call your image generation API
-                    const demoImages = [
-                        'https://images.unsplash.com/photo-1682687220742-aba13b6e50ba?ixlib=rb-4.0.3&ixid=M3wxMjA3fDF8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
-                        'https://images.unsplash.com/photo-1695758478666-0672b74a9fc6?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
-                        'https://images.unsplash.com/photo-1695653422714-d6f8cff4f3bd?ixlib=rb-4.0.3&ixid=M3wxMjA3fDF8MHxwa
+        function stopRecording() {
+            voiceIndicator.style.display = 'none';
+            micButton.innerHTML = '<i class="fas fa-microphone"></i>';
+            micButton.style.color = '';
+            if (recognition) {
+                recognition.recording = false;
+            }
+        }
+
+        // Initialize the app
+        init();
+    </script>
+</body>
+</html>
