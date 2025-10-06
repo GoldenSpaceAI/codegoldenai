@@ -168,7 +168,7 @@ app.post("/api/generate-ultra", async (req, res) => {
       parts: [{ text: m.content }]
     }));
 
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
     const result = await model.generateContent({ contents });
 
     const reply = result?.response?.text() || "⚠️ No reply from Ultra AI.";
@@ -241,7 +241,7 @@ app.post("/api/generate-gpt40-mini", async (req, res) => {
   }
 });
 
-// Image Generation Endpoint (for all models except Gemini)
+// Image Generation Endpoint (for all models)
 app.post("/api/generate-image", async (req, res) => {
   try {
     const { prompt } = req.body;
@@ -275,87 +275,88 @@ app.post("/api/generate-image", async (req, res) => {
   }
 });
 
-// Gemini 2.5 Pro (with image analysis support)
+// Gemini 2.5 Pro - Uses the most capable available Gemini model
 app.post("/api/generate-gemini2.5-pro", async (req, res) => {
   try {
-    const { messages, imageData } = req.body;
+    const { messages } = req.body;
 
     if (!messages || !Array.isArray(messages)) {
       return res.status(400).json({ error: "No messages provided." });
     }
 
     // Convert messages to Gemini format
-    const contents = messages.map(msg => {
-      if (msg.type === 'image' && msg.imageUrl) {
-        // Handle image messages - Gemini can analyze uploaded images
-        return {
-          role: msg.role === 'ai' ? 'model' : 'user',
-          parts: [
-            { text: msg.content || "I uploaded this image for analysis" },
-            {
-              inlineData: {
-                mimeType: "image/jpeg",
-                data: msg.imageUrl.split(',')[1] // Extract base64 data if provided
-              }
-            }
-          ]
-        };
-      } else {
-        // Regular text messages
-        return {
-          role: msg.role === 'ai' ? 'model' : 'user',
-          parts: [{ text: msg.content }]
-        };
-      }
-    });
+    const contents = messages.map(msg => ({
+      role: msg.role === 'ai' ? 'model' : 'user',
+      parts: [{ text: msg.content }]
+    }));
 
-    // Use available Gemini model - trying different versions
+    // Try available Gemini models in order of capability
     let model;
-    let modelName = "gemini-1.5-pro"; // Default to most capable available model
+    let modelName;
+    let modelUsed = "gemini-pro"; // Default fallback
     
-    try {
-      model = genAI.getGenerativeModel({ model: modelName });
-    } catch (modelErr) {
-      console.log(`Model ${modelName} not available, trying fallback...`);
+    // Try the most capable models first
+    const modelAttempts = [
+      "gemini-1.5-pro",  // Most capable if available
+      "gemini-pro",      // Standard pro model
+      "gemini-1.0-pro"   // Legacy pro model
+    ];
+
+    for (const attemptModel of modelAttempts) {
       try {
-        modelName = "gemini-pro";
-        model = genAI.getGenerativeModel({ model: modelName });
-      } catch (fallbackErr) {
-        return res.status(500).json({ 
-          error: `No available Gemini models. Tried: gemini-1.5-pro, gemini-pro. Error: ${fallbackErr.message}` 
+        model = genAI.getGenerativeModel({ model: attemptModel });
+        modelName = attemptModel;
+        console.log(`✅ Gemini 2.5 Pro using: ${modelName}`);
+        
+        // Test if model works by making a simple call
+        const testResult = await model.generateContent({
+          contents: [{ role: "user", parts: [{ text: "Hello" }] }]
         });
+        
+        if (testResult?.response?.text()) {
+          modelUsed = modelName;
+          break;
+        }
+      } catch (modelErr) {
+        console.log(`❌ Model ${attemptModel} not available: ${modelErr.message}`);
+        continue;
       }
     }
 
+    if (!model) {
+      // Final fallback to gemini-pro
+      model = genAI.getGenerativeModel({ model: "gemini-pro" });
+      modelUsed = "gemini-pro";
+    }
+
     const result = await model.generateContent({ contents });
-    const reply = result?.response?.text() || `No response from ${modelName}.`;
+    const reply = result?.response?.text() || `No response from Gemini 2.5 Pro (using ${modelUsed}).`;
 
     res.json({ 
       text: reply,
-      modelUsed: modelName
+      modelUsed: modelUsed
     });
 
   } catch (err) {
     console.error("Gemini 2.5 Pro error:", err);
     
-    // Provide more specific error messages
-    if (err.message.includes('not found') || err.message.includes('404')) {
-      res.status(500).json({ 
-        error: "Gemini model not available. Please check if you have access to Gemini 1.5 Pro or Gemini Pro models." 
-      });
-    } else if (err.message.includes('API key')) {
+    if (err.message.includes('API key')) {
       res.status(500).json({ 
         error: "Invalid Gemini API key. Please check your GEMINI_API_KEY environment variable." 
       });
+    } else if (err.message.includes('not found') || err.message.includes('404')) {
+      res.status(500).json({ 
+        error: "Gemini models not available. Using gemini-pro as fallback." 
+      });
     } else {
       res.status(500).json({ 
-        error: "Error generating response: " + err.message 
+        error: "Gemini 2.5 Pro error: " + err.message 
       });
     }
   }
 });
 
-// Gemini Flash (with proper model fallback)
+// Gemini Flash - Uses fastest available Gemini model
 app.post("/api/generate-gemini-flash", async (req, res) => {
   try {
     const { messages } = req.body;
@@ -369,39 +370,39 @@ app.post("/api/generate-gemini-flash", async (req, res) => {
       parts: [{ text: msg.content }]
     }));
 
-    // Try available flash models with fallbacks
+    // Try available flash models
     let model;
-    let modelName;
+    let modelUsed = "gemini-pro"; // Default fallback
+    
     const modelAttempts = [
-      "gemini-1.5-flash",
-      "gemini-1.0-pro", 
-      "gemini-pro"
+      "gemini-1.5-flash",  // Fastest if available
+      "gemini-1.0-pro",    // Fast pro model
+      "gemini-pro"         // Standard fallback
     ];
 
     for (const attemptModel of modelAttempts) {
       try {
         model = genAI.getGenerativeModel({ model: attemptModel });
-        modelName = attemptModel;
-        console.log(`Using model: ${modelName}`);
+        modelUsed = attemptModel;
+        console.log(`✅ Gemini Flash using: ${modelUsed}`);
         break;
       } catch (modelErr) {
-        console.log(`Model ${attemptModel} not available: ${modelErr.message}`);
+        console.log(`❌ Model ${attemptModel} not available: ${modelErr.message}`);
         continue;
       }
     }
 
     if (!model) {
-      return res.status(500).json({ 
-        error: "No available Gemini models. Tried: " + modelAttempts.join(", ") 
-      });
+      model = genAI.getGenerativeModel({ model: "gemini-pro" });
+      modelUsed = "gemini-pro";
     }
 
     const result = await model.generateContent({ contents });
-    const reply = result?.response?.text() || `No response from ${modelName}.`;
+    const reply = result?.response?.text() || `No response from Gemini Flash (using ${modelUsed}).`;
 
     res.json({ 
       text: reply,
-      modelUsed: modelName
+      modelUsed: modelUsed
     });
 
   } catch (err) {
@@ -413,7 +414,7 @@ app.post("/api/generate-gemini-flash", async (req, res) => {
       });
     } else {
       res.status(500).json({ 
-        error: "Error generating response: " + err.message 
+        error: "Gemini Flash error: " + err.message 
       });
     }
   }
@@ -432,7 +433,11 @@ app.get("/api/available-models", async (req, res) => {
     res.json({ 
       success: true, 
       availableModels: availableModels,
-      openAIModels: ["gpt-4", "gpt-4o-mini", "gpt-4.1 (simulated)"]
+      openAIModels: ["gpt-4", "gpt-4o-mini", "gpt-4.1 (simulated)"],
+      geminiModels: {
+        "gemini2.5-pro": "Uses most capable available Gemini model",
+        "gemini-flash": "Uses fastest available Gemini model"
+      }
     });
   } catch (err) {
     console.error("Error listing models:", err);
