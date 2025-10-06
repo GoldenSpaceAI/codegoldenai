@@ -168,7 +168,7 @@ app.post("/api/generate-ultra", async (req, res) => {
       parts: [{ text: m.content }]
     }));
 
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
     const result = await model.generateContent({ contents });
 
     const reply = result?.response?.text() || "⚠️ No reply from Ultra AI.";
@@ -241,121 +241,34 @@ app.post("/api/generate-gpt40-mini", async (req, res) => {
   }
 });
 
-// Image Generation Endpoint (for all models except Gemini)
-app.post("/api/generate-image", async (req, res) => {
-  try {
-    const { prompt } = req.body;
-    
-    if (!prompt) {
-      return res.status(400).json({ error: "No prompt provided for image generation." });
-    }
-
-    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-    
-    // Generate image using DALL-E
-    const response = await openai.images.generate({
-      model: "dall-e-3",
-      prompt: prompt,
-      n: 1,
-      size: "1024x1024",
-      quality: "standard",
-    });
-
-    const imageUrl = response.data[0].url;
-    
-    res.json({ 
-      success: true, 
-      imageUrl: imageUrl,
-      message: "Image generated successfully"
-    });
-
-  } catch (err) {
-    console.error("Image generation error:", err);
-    res.status(500).json({ error: "Error generating image: " + err.message });
-  }
-});
-
-// Gemini 2.5 Pro (with image analysis support)
+// Gemini 2.5 Pro
 app.post("/api/generate-gemini2.5-pro", async (req, res) => {
   try {
-    const { messages, imageData } = req.body;
+    const { messages } = req.body;
 
     if (!messages || !Array.isArray(messages)) {
       return res.status(400).json({ error: "No messages provided." });
     }
 
     // Convert messages to Gemini format
-    const contents = messages.map(msg => {
-      if (msg.type === 'image' && msg.imageUrl) {
-        // Handle image messages - Gemini can analyze uploaded images
-        return {
-          role: msg.role === 'ai' ? 'model' : 'user',
-          parts: [
-            { text: msg.content || "I uploaded this image for analysis" },
-            {
-              inlineData: {
-                mimeType: "image/jpeg",
-                data: msg.imageUrl.split(',')[1] // Extract base64 data if provided
-              }
-            }
-          ]
-        };
-      } else {
-        // Regular text messages
-        return {
-          role: msg.role === 'ai' ? 'model' : 'user',
-          parts: [{ text: msg.content }]
-        };
-      }
-    });
+    const contents = messages.map(msg => ({
+      role: msg.role === 'ai' ? 'model' : 'user',
+      parts: [{ text: msg.content }]
+    }));
 
-    // Use available Gemini model - trying different versions
-    let model;
-    let modelName = "gemini-1.5-pro"; // Default to most capable available model
-    
-    try {
-      model = genAI.getGenerativeModel({ model: modelName });
-    } catch (modelErr) {
-      console.log(`Model ${modelName} not available, trying fallback...`);
-      try {
-        modelName = "gemini-pro";
-        model = genAI.getGenerativeModel({ model: modelName });
-      } catch (fallbackErr) {
-        return res.status(500).json({ 
-          error: `No available Gemini models. Tried: gemini-1.5-pro, gemini-pro. Error: ${fallbackErr.message}` 
-        });
-      }
-    }
-
+    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
     const result = await model.generateContent({ contents });
-    const reply = result?.response?.text() || `No response from ${modelName}.`;
 
-    res.json({ 
-      text: reply,
-      modelUsed: modelName
-    });
+    const reply = result?.response?.text() || "No response from Gemini 2.5 Pro.";
+    res.json({ text: reply });
 
   } catch (err) {
     console.error("Gemini 2.5 Pro error:", err);
-    
-    // Provide more specific error messages
-    if (err.message.includes('not found') || err.message.includes('404')) {
-      res.status(500).json({ 
-        error: "Gemini model not available. Please check if you have access to Gemini 1.5 Pro or Gemini Pro models." 
-      });
-    } else if (err.message.includes('API key')) {
-      res.status(500).json({ 
-        error: "Invalid Gemini API key. Please check your GEMINI_API_KEY environment variable." 
-      });
-    } else {
-      res.status(500).json({ 
-        error: "Error generating response: " + err.message 
-      });
-    }
+    res.status(500).json({ error: "Error generating response." });
   }
 });
 
-// Gemini Flash (with proper model fallback)
+// Gemini Flash
 app.post("/api/generate-gemini-flash", async (req, res) => {
   try {
     const { messages } = req.body;
@@ -369,76 +282,15 @@ app.post("/api/generate-gemini-flash", async (req, res) => {
       parts: [{ text: msg.content }]
     }));
 
-    // Try available flash models with fallbacks
-    let model;
-    let modelName;
-    const modelAttempts = [
-      "gemini-1.5-flash",
-      "gemini-1.0-pro", 
-      "gemini-pro"
-    ];
-
-    for (const attemptModel of modelAttempts) {
-      try {
-        model = genAI.getGenerativeModel({ model: attemptModel });
-        modelName = attemptModel;
-        console.log(`Using model: ${modelName}`);
-        break;
-      } catch (modelErr) {
-        console.log(`Model ${attemptModel} not available: ${modelErr.message}`);
-        continue;
-      }
-    }
-
-    if (!model) {
-      return res.status(500).json({ 
-        error: "No available Gemini models. Tried: " + modelAttempts.join(", ") 
-      });
-    }
-
+    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
     const result = await model.generateContent({ contents });
-    const reply = result?.response?.text() || `No response from ${modelName}.`;
 
-    res.json({ 
-      text: reply,
-      modelUsed: modelName
-    });
+    const reply = result?.response?.text() || "No response from Gemini Flash.";
+    res.json({ text: reply });
 
   } catch (err) {
     console.error("Gemini Flash error:", err);
-    
-    if (err.message.includes('API key')) {
-      res.status(500).json({ 
-        error: "Invalid Gemini API key. Please check your GEMINI_API_KEY." 
-      });
-    } else {
-      res.status(500).json({ 
-        error: "Error generating response: " + err.message 
-      });
-    }
-  }
-});
-
-// Available models endpoint to check what's accessible
-app.get("/api/available-models", async (req, res) => {
-  try {
-    const models = await genAI.listModels();
-    const availableModels = models.map(model => ({
-      name: model.name,
-      supportedGenerationMethods: model.supportedGenerationMethods,
-      description: model.description
-    }));
-    
-    res.json({ 
-      success: true, 
-      availableModels: availableModels,
-      openAIModels: ["gpt-4", "gpt-4o-mini", "gpt-4.1 (simulated)"]
-    });
-  } catch (err) {
-    console.error("Error listing models:", err);
-    res.status(500).json({ 
-      error: "Error listing available models: " + err.message 
-    });
+    res.status(500).json({ error: "Error generating response." });
   }
 });
 
@@ -463,6 +315,7 @@ app.post("/api/upload-image", upload.single('image'), async (req, res) => {
 });
 
 // Chat storage endpoints (simple in-memory storage for demo)
+// In production, you'd want to use a database
 let chatStorage = {};
 
 app.post("/api/save-chat", async (req, res) => {
@@ -502,6 +355,8 @@ app.get("/api/load-chat/:chatId", async (req, res) => {
 
 app.get("/api/user-chats", async (req, res) => {
   try {
+    // For demo purposes, return all chats
+    // In production, you'd filter by user ID
     const userChats = Object.entries(chatStorage).map(([id, data]) => ({
       id,
       title: data.title,
@@ -516,35 +371,7 @@ app.get("/api/user-chats", async (req, res) => {
   }
 });
 
-// Health check endpoint
-app.get("/api/health", async (req, res) => {
-  try {
-    // Test OpenAI connection
-    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-    await openai.models.list();
-    
-    // Test Gemini connection
-    await genAI.listModels();
-    
-    res.json({ 
-      status: "healthy", 
-      services: {
-        openai: "connected",
-        gemini: "connected",
-        server: "running"
-      }
-    });
-  } catch (err) {
-    res.status(500).json({ 
-      status: "unhealthy", 
-      error: err.message 
-    });
-  }
-});
-
 // ================== START SERVER ==================
 app.listen(PORT, () => {
   console.log(`🚀 Server running at http://localhost:${PORT}`);
-  console.log(`📊 Check available models at http://localhost:${PORT}/api/available-models`);
-  console.log(`❤️  Health check at http://localhost:${PORT}/api/health`);
 });
