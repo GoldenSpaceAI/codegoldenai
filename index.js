@@ -148,8 +148,73 @@ app.post("/api/generate-advanced", async (req, res) => {
     res.status(500).json({ error: "Error generating response." });
   }
 });
+// DeepSeek Chat - General Purpose
+app.post("/api/generate-deepseek-chat", async (req, res) => {
+  try {
+    const { messages } = req.body;
+    
+    const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.DEEPSEEK_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: "deepseek-chat",
+        messages: messages.map(msg => ({
+          role: msg.role === 'ai' ? 'assistant' : 'user',
+          content: msg.content
+        })),
+        max_tokens: 4000,
+        temperature: 0.7
+      })
+    });
 
-// Ultra AI (Gemini 2.5 Pro) with memory of last 20 messages
+    const data = await response.json();
+    res.json({ 
+      text: data.choices[0]?.message?.content || "No response.",
+      model: "DeepSeek Chat"
+    });
+    
+  } catch (err) {
+    console.error("DeepSeek Chat error:", err);
+    res.status(500).json({ error: "AI service error" });
+  }
+});
+
+// DeepSeek Coder - Programming Specialist
+app.post("/api/generate-deepseek-coder", async (req, res) => {
+  try {
+    const { messages } = req.body;
+    
+    const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.DEEPSEEK_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: "deepseek-coder",
+        messages: messages.map(msg => ({
+          role: msg.role === 'ai' ? 'assistant' : 'user',
+          content: msg.content
+        })),
+        max_tokens: 4000,
+        temperature: 0.7
+      })
+    });
+
+    const data = await response.json();
+    res.json({ 
+      text: data.choices[0]?.message?.content || "No response.",
+      model: "DeepSeek Coder"
+    });
+    
+  } catch (err) {
+    console.error("DeepSeek Coder error:", err);
+    res.status(500).json({ error: "AI service error" });
+  }
+});// Ultra AI (Gemini 2.5 Pro) with memory of last 20 messages
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 app.post("/api/generate-ultra", async (req, res) => {
