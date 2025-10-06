@@ -6,7 +6,6 @@
     <title>Advanced AI Assistant</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        /* Your existing CSS remains exactly the same */
         :root {
             --primary: #4361ee;
             --secondary: #3f37c9;
@@ -18,6 +17,7 @@
             --success: #4cc9f0;
             --warning: #f72585;
             --code-bg: #2d2d44;
+            --deep-search-bg: #2a2a3a;
         }
 
         * {
@@ -175,6 +175,13 @@
             border-bottom-left-radius: 5px;
         }
 
+        .deep-search-message {
+            align-self: flex-start;
+            background: var(--deep-search-bg);
+            border: 1px solid var(--accent);
+            border-bottom-left-radius: 5px;
+        }
+
         .message-header {
             display: flex;
             align-items: center;
@@ -182,6 +189,20 @@
             margin-bottom: 5px;
             font-size: 14px;
             opacity: 0.8;
+        }
+
+        .deep-search-header {
+            color: var(--accent);
+            font-weight: 600;
+        }
+
+        .deep-search-badge {
+            background: var(--accent);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            margin-left: 8px;
         }
 
         .code-block {
@@ -221,6 +242,7 @@
         .image-container img {
             max-width: 100%;
             border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
         }
 
         .uploaded-image {
@@ -364,6 +386,11 @@
             background: rgba(255, 255, 255, 0.1);
         }
 
+        .feature-btn.active {
+            background: var(--accent);
+            border-color: var(--accent);
+        }
+
         .typing-indicator {
             display: flex;
             gap: 5px;
@@ -393,6 +420,30 @@
 
         .file-input {
             display: none;
+        }
+
+        .research-section {
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 10px;
+            padding: 15px;
+            margin: 10px 0;
+            border-left: 3px solid var(--accent);
+        }
+
+        .research-section h4 {
+            color: var(--accent);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .research-section ul {
+            padding-left: 20px;
+        }
+
+        .research-section li {
+            margin-bottom: 5px;
         }
 
         /* Scrollbar styling */
@@ -530,6 +581,7 @@
         // Chat state
         let currentChatId = null;
         let currentModel = 'gpt-4.1';
+        let isDeepSearchMode = false;
         let chats = JSON.parse(localStorage.getItem('aiChats')) || {};
         
         // Model endpoints mapping
@@ -621,9 +673,10 @@
             document.querySelectorAll('.chat-item').forEach(item => {
                 item.classList.remove('active');
             });
-            const chatIndex = Array.from(chats.keys()).indexOf(chatId);
-            if (chatIndex >= 0) {
-                document.querySelectorAll('.chat-item')[chatIndex]?.classList.add('active');
+            const chatItems = document.querySelectorAll('.chat-item');
+            const chatIndex = Object.keys(chats).indexOf(chatId);
+            if (chatIndex >= 0 && chatItems[chatIndex]) {
+                chatItems[chatIndex].classList.add('active');
             }
             
             chatContainer.scrollTop = chatContainer.scrollHeight;
@@ -642,13 +695,23 @@
         // Render a message in the chat
         function renderMessage(message) {
             const messageDiv = document.createElement('div');
-            messageDiv.className = `message ${message.role}-message`;
+            
+            if (message.isDeepSearch) {
+                messageDiv.className = 'message deep-search-message';
+            } else {
+                messageDiv.className = `message ${message.role}-message`;
+            }
             
             const messageHeader = document.createElement('div');
             messageHeader.className = 'message-header';
             
             if (message.role === 'ai') {
-                messageHeader.innerHTML = `<i class="fas fa-robot"></i><span>Advanced AI</span>`;
+                if (message.isDeepSearch) {
+                    messageHeader.innerHTML = `<i class="fas fa-search"></i><span>Deep Research</span><span class="deep-search-badge">Comprehensive Analysis</span>`;
+                    messageHeader.classList.add('deep-search-header');
+                } else {
+                    messageHeader.innerHTML = `<i class="fas fa-robot"></i><span>Advanced AI</span>`;
+                }
             } else {
                 messageHeader.innerHTML = `<i class="fas fa-user"></i><span>You</span>`;
             }
@@ -731,13 +794,13 @@
             this.style.height = (this.scrollHeight) + 'px';
         });
 
-        // Send message function - NOW CONNECTS TO REAL BACKEND
+        // Send message function - NOW WITH DEEP SEARCH MODE
         async function sendMessage() {
             const message = messageInput.value.trim();
             if (message === '') return;
 
             // Add user message to chat
-            addMessageToChat(message, 'user');
+            addMessageToChat(message, 'user', 'text', null, isDeepSearchMode);
             messageInput.value = '';
             messageInput.style.height = 'auto';
 
@@ -756,6 +819,21 @@
 
                 // Call the appropriate API endpoint based on selected model
                 const endpoint = modelEndpoints[currentModel];
+                
+                // For deep search, enhance the prompt
+                let enhancedPrompt = message;
+                if (isDeepSearchMode) {
+                    enhancedPrompt = `Please conduct a comprehensive deep search analysis on: "${message}". Provide a detailed, professional response with:
+                    - Key findings and insights
+                    - Relevant data and statistics
+                    - Multiple perspectives
+                    - Practical applications
+                    - Future implications
+                    - Sources and references (where applicable)
+                    
+                    Format the response in a structured, professional manner.`;
+                }
+
                 const response = await fetch(endpoint, {
                     method: 'POST',
                     headers: {
@@ -763,7 +841,7 @@
                     },
                     body: JSON.stringify({
                         messages: apiMessages,
-                        prompt: message // Fallback for some endpoints
+                        prompt: enhancedPrompt
                     })
                 });
 
@@ -774,7 +852,13 @@
                 const data = await response.json();
                 
                 removeTypingIndicator();
-                addMessageToChat(data.text, 'ai');
+                addMessageToChat(data.text, 'ai', 'text', null, isDeepSearchMode);
+                
+                // Reset deep search mode after response
+                if (isDeepSearchMode) {
+                    isDeepSearchMode = false;
+                    deepSearchBtn.classList.remove('active');
+                }
                 
             } catch (error) {
                 console.error('Error sending message:', error);
@@ -784,7 +868,7 @@
         }
 
         // Add message to current chat
-        function addMessageToChat(content, role, type = 'text', imageUrl = null) {
+        function addMessageToChat(content, role, type = 'text', imageUrl = null, isDeepSearch = false) {
             if (!currentChatId) return;
             
             const message = {
@@ -792,6 +876,7 @@
                 content,
                 type,
                 imageUrl,
+                isDeepSearch,
                 timestamp: new Date().toISOString()
             };
             
@@ -880,6 +965,47 @@
             }
         });
 
+        // Deep Search functionality
+        deepSearchBtn.addEventListener('click', () => {
+            const message = messageInput.value.trim();
+            if (message === '') {
+                alert('Please type your question first, then click Deep Search.');
+                return;
+            }
+
+            isDeepSearchMode = true;
+            deepSearchBtn.classList.add('active');
+            sendMessage();
+        });
+
+        // Image Generation functionality
+        imageGenBtn.addEventListener('click', () => {
+            const prompt = prompt('Describe the image you want to generate:');
+            if (prompt) {
+                // Add user message
+                addMessageToChat(`Generate an image: ${prompt}`, 'user');
+                
+                // Show typing indicator
+                showTypingIndicator();
+                
+                // Simulate image generation (in real implementation, this would call your image generation API)
+                setTimeout(() => {
+                    removeTypingIndicator();
+                    
+                    // For demo purposes, use a placeholder image
+                    // In production, this would be the actual generated image URL from your API
+                    const demoImages = [
+                        'https://images.unsplash.com/photo-1682687220742-aba13b6e50ba?ixlib=rb-4.0.3&ixid=M3wxMjA3fDF8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
+                        'https://images.unsplash.com/photo-1695758478666-0672b74a9fc6?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
+                        'https://images.unsplash.com/photo-1695653422714-d6f8cff4f3bd?ixlib=rb-4.0.3&ixid=M3wxMjA3fDF8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80'
+                    ];
+                    const randomImage = demoImages[Math.floor(Math.random() * demoImages.length)];
+                    
+                    addMessageToChat(`IMAGE:${randomImage}`, 'ai');
+                }, 2000);
+            }
+        });
+
         // Voice recording simulation
         let isRecording = false;
         
@@ -959,18 +1085,6 @@
                 
                 console.log(`Switched to model: ${button.textContent}`);
             });
-        });
-
-        // Image generation button
-        imageGenBtn.addEventListener('click', () => {
-            messageInput.value = "Generate an image of a futuristic cityscape";
-            sendMessage();
-        });
-
-        // Deep search button
-        deepSearchBtn.addEventListener('click', () => {
-            messageInput.value = "Conduct a deep search on the latest advancements in artificial intelligence";
-            sendMessage();
         });
 
         // Initialize the app
