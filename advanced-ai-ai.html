@@ -114,15 +114,7 @@
             transition: all 0.2s;
             display: flex;
             align-items: center;
-            justify-content: space-between;
-            position: relative;
-        }
-
-        .chat-item-content {
-            display: flex;
-            align-items: center;
             gap: 10px;
-            flex: 1;
         }
 
         .chat-item:hover {
@@ -135,26 +127,6 @@
 
         .chat-item i {
             color: var(--gray);
-        }
-
-        .delete-chat-btn {
-            background: none;
-            border: none;
-            color: var(--gray);
-            cursor: pointer;
-            padding: 5px;
-            border-radius: 4px;
-            opacity: 0;
-            transition: all 0.2s;
-        }
-
-        .chat-item:hover .delete-chat-btn {
-            opacity: 1;
-        }
-
-        .delete-chat-btn:hover {
-            color: var(--warning);
-            background: rgba(247, 37, 133, 0.1);
         }
 
         .main-content {
@@ -557,11 +529,6 @@
             color: var(--light);
         }
 
-        .modal-btn.danger {
-            background: var(--warning);
-            color: white;
-        }
-
         /* Scrollbar styling */
         ::-webkit-scrollbar {
             width: 6px;
@@ -669,18 +636,6 @@
         </div>
     </div>
 
-    <!-- Delete Chat Confirmation Modal -->
-    <div class="modal" id="deleteChatModal">
-        <div class="modal-content">
-            <h3><i class="fas fa-trash"></i> Delete Chat</h3>
-            <p style="margin-bottom: 15px;">Are you sure you want to delete this chat? This action cannot be undone.</p>
-            <div class="modal-buttons">
-                <button class="modal-btn secondary" id="cancelDelete">Cancel</button>
-                <button class="modal-btn danger" id="confirmDelete">Delete Chat</button>
-            </div>
-        </div>
-    </div>
-
     <!-- Hidden file input for image upload -->
     <input type="file" id="fileInput" class="file-input" accept="image/*">
 
@@ -694,12 +649,9 @@
         const newChatBtn = document.getElementById('newChatBtn');
         const customInstructionsBtn = document.getElementById('customInstructionsBtn');
         const customInstructionsModal = document.getElementById('customInstructionsModal');
-        const deleteChatModal = document.getElementById('deleteChatModal');
         const instructionsInput = document.getElementById('instructionsInput');
         const saveInstructionsBtn = document.getElementById('saveInstructions');
         const cancelInstructionsBtn = document.getElementById('cancelInstructions');
-        const cancelDeleteBtn = document.getElementById('cancelDelete');
-        const confirmDeleteBtn = document.getElementById('confirmDelete');
         const modelButtons = document.querySelectorAll('.model-btn');
         const imageGenBtn = document.getElementById('imageGenBtn');
         const deepSearchBtn = document.getElementById('deepSearchBtn');
@@ -714,7 +666,6 @@
         let chats = JSON.parse(localStorage.getItem('aiChats')) || {};
         let customInstructions = localStorage.getItem('customInstructions') || '';
         let recognition = null;
-        let chatToDelete = null;
         
         // Model endpoints mapping
         const modelEndpoints = {
@@ -734,7 +685,6 @@
                 loadChat(currentChatId || Object.keys(chats)[0]);
             }
             initSpeechRecognition();
-            setupEventListeners();
         }
 
         // Initialize speech recognition
@@ -763,132 +713,6 @@
                 };
             } else {
                 micButton.style.display = 'none';
-            }
-        }
-
-        // Setup event listeners
-        function setupEventListeners() {
-            // Mic button
-            micButton.addEventListener('click', toggleRecording);
-            
-            // Send button and Enter key
-            sendButton.addEventListener('click', sendMessage);
-            messageInput.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    sendMessage();
-                }
-            });
-            
-            // Auto-resize textarea
-            messageInput.addEventListener('input', function() {
-                this.style.height = 'auto';
-                this.style.height = (this.scrollHeight) + 'px';
-            });
-            
-            // Model selection
-            modelButtons.forEach(button => {
-                button.addEventListener('click', () => {
-                    modelButtons.forEach(btn => btn.classList.remove('active'));
-                    button.classList.add('active');
-                    currentModel = button.dataset.model;
-                    if (currentChatId) {
-                        chats[currentChatId].model = currentModel;
-                        saveChats();
-                    }
-                });
-            });
-            
-            // Feature buttons
-            deepSearchBtn.addEventListener('click', () => {
-                const message = messageInput.value.trim();
-                if (message === '') {
-                    alert('Please type your question first, then click Deep Search.');
-                    return;
-                }
-                isDeepSearchMode = true;
-                deepSearchBtn.classList.add('active');
-                sendMessage();
-            });
-            
-            imageGenBtn.addEventListener('click', () => {
-                const prompt = prompt('Describe the image you want to generate:');
-                if (prompt) {
-                    addMessageToChat(`Generate an image: ${prompt}`, 'user');
-                    showTypingIndicator();
-                    setTimeout(() => {
-                        removeTypingIndicator();
-                        // For demo - in production, this would call your image generation API
-                        const demoImages = [
-                            'https://images.unsplash.com/photo-1682687220742-aba13b6e50ba?ixlib=rb-4.0.3&ixid=M3wxMjA3fDF8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
-                            'https://images.unsplash.com/photo-1695758478666-0672b74a9fc6?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
-                            'https://images.unsplash.com/photo-1695653422714-d6f8cff4f3bd?ixlib=rb-4.0.3&ixid=M3wxMjA3fDF8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80'
-                        ];
-                        const randomImage = demoImages[Math.floor(Math.random() * demoImages.length)];
-                        addMessageToChat(`IMAGE:${randomImage}`, 'ai');
-                    }, 2000);
-                }
-            });
-            
-            uploadImageBtn.addEventListener('click', () => fileInput.click());
-            fileInput.addEventListener('change', handleImageUpload);
-            
-            // Chat management
-            newChatBtn.addEventListener('click', () => {
-                if (chatContainer.children.length > 1) {
-                    if (confirm('Start a new chat? Your current chat will be saved.')) {
-                        createNewChat();
-                    }
-                } else {
-                    createNewChat();
-                }
-            });
-            
-            // Custom instructions modal
-            customInstructionsBtn.addEventListener('click', () => {
-                instructionsInput.value = customInstructions;
-                customInstructionsModal.style.display = 'flex';
-            });
-            
-            saveInstructionsBtn.addEventListener('click', () => {
-                customInstructions = instructionsInput.value.trim();
-                localStorage.setItem('customInstructions', customInstructions);
-                customInstructionsModal.style.display = 'none';
-                alert('Custom instructions saved! The AI will now respond according to your preferences.');
-            });
-            
-            cancelInstructionsBtn.addEventListener('click', () => {
-                customInstructionsModal.style.display = 'none';
-            });
-
-            // Delete chat modal
-            cancelDeleteBtn.addEventListener('click', () => {
-                deleteChatModal.style.display = 'none';
-                chatToDelete = null;
-            });
-
-            confirmDeleteBtn.addEventListener('click', deleteChat);
-        }
-
-        // Delete chat function
-        function deleteChat() {
-            if (chatToDelete) {
-                delete chats[chatToDelete];
-                
-                // If we're deleting the current chat, switch to another one
-                if (currentChatId === chatToDelete) {
-                    const remainingChats = Object.keys(chats);
-                    if (remainingChats.length > 0) {
-                        loadChat(remainingChats[0]);
-                    } else {
-                        createNewChat();
-                    }
-                }
-                
-                saveChats();
-                loadChatHistory();
-                deleteChatModal.style.display = 'none';
-                chatToDelete = null;
             }
         }
 
@@ -934,28 +758,12 @@
                 const chatItem = document.createElement('div');
                 chatItem.className = `chat-item ${chat.id === currentChatId ? 'active' : ''}`;
                 chatItem.innerHTML = `
-                    <div class="chat-item-content">
-                        <i class="fas fa-comment"></i>
-                        <span>${chat.title}</span>
-                    </div>
-                    <button class="delete-chat-btn" data-chat-id="${chat.id}">
-                        <i class="fas fa-trash"></i>
-                    </button>
+                    <i class="fas fa-comment"></i>
+                    <span>${chat.title}</span>
                 `;
                 
-                // Chat selection
-                chatItem.addEventListener('click', (e) => {
-                    if (!e.target.closest('.delete-chat-btn')) {
-                        loadChat(chat.id);
-                    }
-                });
-                
-                // Delete button
-                const deleteBtn = chatItem.querySelector('.delete-chat-btn');
-                deleteBtn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    chatToDelete = chat.id;
-                    deleteChatModal.style.display = 'flex';
+                chatItem.addEventListener('click', () => {
+                    loadChat(chat.id);
                 });
                 
                 chatHistory.appendChild(chatItem);
@@ -1124,6 +932,12 @@
             }
         }
 
+        // Auto-resize textarea
+        messageInput.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = (this.scrollHeight) + 'px';
+        });
+
         // Send message function with smart memory management
         async function sendMessage() {
             const message = messageInput.value.trim();
@@ -1246,7 +1060,11 @@
         }
 
         // Handle image upload
-        async function handleImageUpload(e) {
+        uploadImageBtn.addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        fileInput.addEventListener('change', async (e) => {
             const file = e.target.files[0];
             if (file) {
                 try {
@@ -1282,42 +1100,34 @@
                     fileInput.value = '';
                 }
             }
-        }
+        });
 
-        // Voice recording functions
-        function toggleRecording() {
-            if (!recognition) return;
-            
-            if (recognition.recording) {
-                stopRecording();
-            } else {
-                startRecording();
+        // Deep Search functionality
+        deepSearchBtn.addEventListener('click', () => {
+            const message = messageInput.value.trim();
+            if (message === '') {
+                alert('Please type your question first, then click Deep Search.');
+                return;
             }
-        }
 
-        function startRecording() {
-            try {
-                recognition.start();
-                voiceIndicator.style.display = 'block';
-                micButton.innerHTML = '<i class="fas fa-square"></i>';
-                micButton.style.color = 'var(--warning)';
-                recognition.recording = true;
-            } catch (err) {
-                console.error('Error starting recording:', err);
-            }
-        }
+            isDeepSearchMode = true;
+            deepSearchBtn.classList.add('active');
+            sendMessage();
+        });
 
-        function stopRecording() {
-            voiceIndicator.style.display = 'none';
-            micButton.innerHTML = '<i class="fas fa-microphone"></i>';
-            micButton.style.color = '';
-            if (recognition) {
-                recognition.recording = false;
-            }
-        }
-
-        // Initialize the app
-        init();
-    </script>
-</body>
-</html>
+        // Image Generation functionality
+        imageGenBtn.addEventListener('click', () => {
+            const prompt = prompt('Describe the image you want to generate:');
+            if (prompt) {
+                addMessageToChat(`Generate an image: ${prompt}`, 'user');
+                
+                showTypingIndicator();
+                
+                setTimeout(() => {
+                    removeTypingIndicator();
+                    
+                    // For demo - in production, this would call your image generation API
+                    const demoImages = [
+                        'https://images.unsplash.com/photo-1682687220742-aba13b6e50ba?ixlib=rb-4.0.3&ixid=M3wxMjA3fDF8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
+                        'https://images.unsplash.com/photo-1695758478666-0672b74a9fc6?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
+                        'https://images.unsplash.com/photo-1695653422714-d6f8cff4f3bd?ixlib=rb-4.0.3&ixid=M3wxMjA3fDF8MHxwa
