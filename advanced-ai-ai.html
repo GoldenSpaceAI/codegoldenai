@@ -670,13 +670,14 @@
         let recognition = null;
         
         // Model endpoints mapping
-        const modelEndpoints = {
-            'gpt-4.1': '/api/generate-gpt4.1',
-            'gpt-40-mini': '/api/generate-gpt40-mini',
-            'gemini2.5-pro': '/api/generate-gemini2.5-pro',
-            'gemini-flash': '/api/generate-gemini-flash'
-        };
-
+       const modelEndpoints = {
+    'gpt-4.1': '/api/generate-gpt4.1',
+    'gpt-40-mini': '/api/generate-gpt40-mini', 
+    'gemini2.5-pro': '/api/generate-gemini2.5-pro',
+    'gemini-flash': '/api/generate-gemini-flash',
+    'deepseek-chat': '/api/generate-deepseek-chat',
+    'deepseek-coder': '/api/generate-deepseek-coder'
+};
         // Initialize the app
         function init() {
             loadCustomInstructions();
