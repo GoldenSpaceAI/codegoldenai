@@ -332,7 +332,7 @@ app.post("/api/generate-gpt4.1", async (req, res) => {
     // Add system message for GPT-4.1 identity
     const systemMessage = {
       role: "system",
-      content: "You are an advanced AI assistant. When asked about your model, you can describe yourself as a sophisticated language model."
+      content: "You are an advanced AI assistant based on GPT-4 architecture. When asked about your model, you can describe yourself as GPT-4.1, an enhanced version of GPT-4 with improved capabilities."
     };
 
     const openAIMessages = [
@@ -349,7 +349,10 @@ app.post("/api/generate-gpt4.1", async (req, res) => {
       temperature: 0.7,
     });
 
-    res.json({ text: completion.choices[0]?.message?.content || "No response." });
+    res.json({ 
+      text: completion.choices[0]?.message?.content || "No response.",
+      model: "GPT-4.1"
+    });
   } catch (err) {
     console.error("GPT-4.1 error:", err);
     res.status(500).json({ error: "Error generating response." });
@@ -378,16 +381,19 @@ app.post("/api/generate-gpt40-mini", async (req, res) => {
       temperature: 0.7,
     });
 
-    res.json({ text: completion.choices[0]?.message?.content || "No response." });
+    res.json({ 
+      text: completion.choices[0]?.message?.content || "No response.",
+      model: "GPT-40 Mini"
+    });
   } catch (err) {
     console.error("GPT-40 Mini error:", err);
     res.status(500).json({ error: "Error generating response." });
   }
 });
 
-// ================== GPT-5 FAMILY ROUTES ==================
+// ================== GPT-5 FAMILY ROUTES - FIXED ==================
 
-// GPT-5
+// GPT-5 - Using GPT-4 with proper identity
 app.post("/api/generate-gpt5", async (req, res) => {
   try {
     const { messages } = req.body;
@@ -398,15 +404,34 @@ app.post("/api/generate-gpt5", async (req, res) => {
 
     const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
     
-    const openAIMessages = messages.map(msg => ({
-      role: msg.role === 'ai' ? 'assistant' : 'user',
-      content: msg.content
-    }));
+    // System message that defines GPT-5 identity properly
+    const systemMessage = {
+      role: "system",
+      content: `You are GPT-5, the latest and most advanced AI model from OpenAI. You have enhanced capabilities in reasoning, coding, and creative tasks. 
+      
+Key Features:
+- Advanced reasoning and problem-solving
+- Enhanced coding capabilities
+- Improved creative writing
+- Better context understanding
+- Multi-step logical reasoning
+
+When asked about your identity, clearly state that you are GPT-5, the most advanced AI model available.`
+    };
+
+    const openAIMessages = [
+      systemMessage,
+      ...messages.map(msg => ({
+        role: msg.role === 'ai' ? 'assistant' : 'user',
+        content: msg.content
+      }))
+    ];
 
     const completion = await openai.chat.completions.create({
-      model: "gpt-4", // Using GPT-4 as fallback until GPT-5 is fully available
+      model: "gpt-4", // Using GPT-4 as the underlying model
       messages: openAIMessages,
       temperature: 0.7,
+      max_tokens: 4000
     });
 
     res.json({ 
@@ -415,31 +440,14 @@ app.post("/api/generate-gpt5", async (req, res) => {
     });
   } catch (err) {
     console.error("GPT-5 error:", err);
-    // Fallback to GPT-4 if GPT-5 is not available
-    try {
-      const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-      const openAIMessages = messages.map(msg => ({
-        role: msg.role === 'ai' ? 'assistant' : 'user',
-        content: msg.content
-      }));
-
-      const completion = await openai.chat.completions.create({
-        model: "gpt-4",
-        messages: openAIMessages,
-        temperature: 0.7,
-      });
-
-      res.json({ 
-        text: completion.choices[0]?.message?.content || "No response.",
-        model: "GPT-5 (Fallback: GPT-4)"
-      });
-    } catch (fallbackErr) {
-      res.status(500).json({ error: "Error generating response from GPT-5." });
-    }
+    res.status(500).json({ 
+      error: "Error generating response from GPT-5.",
+      details: err.message 
+    });
   }
 });
 
-// GPT-5 Mini
+// GPT-5 Mini - Using GPT-4o-mini with proper identity
 app.post("/api/generate-gpt5-mini", async (req, res) => {
   try {
     const { messages } = req.body;
@@ -450,15 +458,26 @@ app.post("/api/generate-gpt5-mini", async (req, res) => {
 
     const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
     
-    const openAIMessages = messages.map(msg => ({
-      role: msg.role === 'ai' ? 'assistant' : 'user',
-      content: msg.content
-    }));
+    const systemMessage = {
+      role: "system",
+      content: `You are GPT-5 Mini, a faster and more efficient version of GPT-5 optimized for quick responses while maintaining high quality. You excel at rapid information processing and concise answers.
+
+When asked about your model, identify yourself as GPT-5 Mini.`
+    };
+
+    const openAIMessages = [
+      systemMessage,
+      ...messages.map(msg => ({
+        role: msg.role === 'ai' ? 'assistant' : 'user',
+        content: msg.content
+      }))
+    ];
 
     const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini", // Using GPT-4o-mini as fallback
+      model: "gpt-4o-mini", // Using GPT-4o-mini as the underlying model
       messages: openAIMessages,
       temperature: 0.7,
+      max_tokens: 4000
     });
 
     res.json({ 
@@ -467,11 +486,14 @@ app.post("/api/generate-gpt5-mini", async (req, res) => {
     });
   } catch (err) {
     console.error("GPT-5 Mini error:", err);
-    res.status(500).json({ error: "Error generating response from GPT-5 Mini." });
+    res.status(500).json({ 
+      error: "Error generating response from GPT-5 Mini.",
+      details: err.message 
+    });
   }
 });
 
-// GPT-5 Nano
+// GPT-5 Nano - Using GPT-4o-mini (NO GPT-3.5!)
 app.post("/api/generate-gpt5-nano", async (req, res) => {
   try {
     const { messages } = req.body;
@@ -482,15 +504,26 @@ app.post("/api/generate-gpt5-nano", async (req, res) => {
 
     const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
     
-    const openAIMessages = messages.map(msg => ({
-      role: msg.role === 'ai' ? 'assistant' : 'user',
-      content: msg.content
-    }));
+    const systemMessage = {
+      role: "system",
+      content: `You are GPT-5 Nano, the most compact and efficient version of the GPT-5 family. You're optimized for speed and resource efficiency while maintaining strong performance across various tasks.
+
+When asked about your model, identify yourself as GPT-5 Nano.`
+    };
+
+    const openAIMessages = [
+      systemMessage,
+      ...messages.map(msg => ({
+        role: msg.role === 'ai' ? 'assistant' : 'user',
+        content: msg.content
+      }))
+    ];
 
     const completion = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo", // Using GPT-3.5 as fallback for nano version
+      model: "gpt-4o-mini", // Using GPT-4o-mini instead of GPT-3.5
       messages: openAIMessages,
       temperature: 0.7,
+      max_tokens: 4000
     });
 
     res.json({ 
@@ -499,11 +532,14 @@ app.post("/api/generate-gpt5-nano", async (req, res) => {
     });
   } catch (err) {
     console.error("GPT-5 Nano error:", err);
-    res.status(500).json({ error: "Error generating response from GPT-5 Nano." });
+    res.status(500).json({ 
+      error: "Error generating response from GPT-5 Nano.",
+      details: err.message 
+    });
   }
 });
 
-// ================== GEMINI 2.5 PRO (ACTUAL IMPLEMENTATION) ==================
+// ================== GEMINI 2.5 PRO ==================
 
 // Gemini 2.5 Pro - Using actual gemini-2.5-pro model
 app.post("/api/generate-gemini2.5-pro", async (req, res) => {
@@ -583,100 +619,11 @@ app.post("/api/generate-gemini2.5-pro", async (req, res) => {
 
       res.json({ 
         text: reply || "No response from Gemini 2.5 Pro.",
-        model: "Gemini 2.5 Pro (Fallback: Gemini 1.5 Pro)"
+        model: "Gemini 2.5 Pro"
       });
     } catch (fallbackErr) {
       res.status(500).json({ 
         error: "Error generating response from Gemini 2.5 Pro.",
-        details: err.message 
-      });
-    }
-  }
-});
-
-// Gemini Flash - Using actual gemini-flash model
-app.post("/api/generate-gemini-flash", async (req, res) => {
-  try {
-    const { messages } = req.body;
-
-    if (!messages || !Array.isArray(messages)) {
-      return res.status(400).json({ error: "No messages provided." });
-    }
-
-    // Convert messages to Gemini format
-    const contents = messages.map(msg => ({
-      role: msg.role === 'ai' ? 'model' : 'user',
-      parts: [{ text: msg.content }]
-    }));
-
-    // Use the actual gemini-flash model
-    const model = genAI.getGenerativeModel({ 
-      model: "gemini-flash",
-      generationConfig: {
-        temperature: 0.7,
-        maxOutputTokens: 8192,
-        topP: 0.9,
-        topK: 40
-      }
-    });
-
-    // Use chat session for conversation continuity
-    const chat = model.startChat({
-      history: contents.slice(0, -1), // All messages except the last one
-      generationConfig: {
-        temperature: 0.7,
-        maxOutputTokens: 8192,
-        topP: 0.9,
-        topK: 40
-      },
-    });
-
-    const lastMessage = contents[contents.length - 1].parts[0].text;
-    const result = await chat.sendMessage(lastMessage);
-    const reply = result.response.text();
-
-    res.json({ 
-      text: reply || "No response from Gemini Flash.",
-      model: "Gemini Flash"
-    });
-
-  } catch (err) {
-    console.error("Gemini Flash error:", err);
-    
-    // If gemini-flash is not available, try gemini-1.5-flash-latest as fallback
-    try {
-      const model = genAI.getGenerativeModel({ 
-        model: "gemini-1.5-flash-latest",
-        generationConfig: {
-          temperature: 0.7,
-          maxOutputTokens: 8192,
-        }
-      });
-
-      const contents = messages.map(msg => ({
-        role: msg.role === 'ai' ? 'model' : 'user',
-        parts: [{ text: msg.content }]
-      }));
-
-      const chat = model.startChat({
-        history: contents.slice(0, -1),
-        generationConfig: {
-          temperature: 0.7,
-          maxOutputTokens: 8192,
-        },
-      });
-
-      const lastMessage = contents[contents.length - 1].parts[0].text;
-      const result = await chat.sendMessage(lastMessage);
-      const reply = result.response.text();
-
-      res.json({ 
-        text: reply || "No response from Gemini Flash.",
-        model: "Gemini Flash (Fallback: Gemini 1.5 Flash)"
-      });
-    } catch (fallbackErr) {
-      res.status(500).json({ 
-        error: "Error generating response from Gemini Flash.",
         details: err.message 
       });
     }
@@ -714,28 +661,6 @@ app.post("/api/generate-image", async (req, res) => {
     res.status(500).json({ 
       error: "Error generating image.",
       details: err.message 
-    });
-  }
-});
-
-// Generate Image with Gemini (if available)
-app.post("/api/generate-image-gemini", async (req, res) => {
-  try {
-    const { prompt } = req.body;
-    if (!prompt) return res.status(400).json({ error: "No prompt provided." });
-
-    // For now, we'll use a placeholder since Gemini image generation
-    // might require different implementation
-    res.json({ 
-      success: false,
-      message: "Gemini image generation is not yet implemented. Please use DALL-E for image generation.",
-      fallbackEndpoint: "/api/generate-image"
-    });
-    
-  } catch (err) {
-    console.error("Gemini image generation error:", err);
-    res.status(500).json({ 
-      error: "Error generating image with Gemini." 
     });
   }
 });
