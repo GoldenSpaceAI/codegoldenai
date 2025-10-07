@@ -1,0 +1,339 @@
+html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Learning AI</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .chat-area {
+            height: 300px;
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin: 20px 0;
+            overflow-y: auto;
+            background-color: #fafafa;
+        }
+        .message {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .user-message {
+            background-color: #e3f2fd;
+            margin-left: 50px;
+        }
+        .ai-message {
+            background-color: #f3e5f5;
+            margin-right: 50px;
+        }
+        input[type="text"] {
+            width: 70%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .stats {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #e8f5e8;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 Advanced Learning AI</h1>
+        <p>This AI learns from conversations and saves knowledge to local storage!</p>
+        
+        <div class="chat-area" id="chatArea">
+            <div class="message ai-message">
+                <strong>AI:</strong> Hello Faris! I'm your learning AI. I'll remember what we talk about and learn from our conversations!
+            </div>
+        </div>
+        
+        <div>
+            <input type="text" id="userInput" placeholder="Type your message here..." onkeypress="handleKeyPress(event)">
+            <button onclick="sendMessage()">Send</button>
+            <button onclick="clearMemory()" style="background-color: #f44336;">Clear Memory</button>
+        </div>
+        
+        <div class="stats" id="stats">
+            <!-- Stats will be populated by JavaScript -->
+        </div>
+    </div>
+
+    <script>
+        class AdvancedAI {
+            constructor() {
+                this.knowledgeBase = this.loadKnowledge();
+                this.conversationHistory = this.loadConversationHistory();
+                this.learningRate = 0.1; // How quickly the AI learns new patterns
+                this.updateStats();
+            }
+
+            loadKnowledge() {
+                const saved = localStorage.getItem('ai_knowledge');
+                return saved ? JSON.parse(saved) : {
+                    facts: {},
+                    patterns: {},
+                    preferences: {},
+                    conversationCount: 0,
+                    topics: {}
+                };
+            }
+
+            loadConversationHistory() {
+                const saved = localStorage.getItem('ai_conversations');
+                return saved ? JSON.parse(saved) : [];
+            }
+
+            saveKnowledge() {
+                localStorage.setItem('ai_knowledge', JSON.stringify(this.knowledgeBase));
+                localStorage.setItem('ai_conversations', JSON.stringify(this.conversationHistory));
+            }
+
+            learnFromMessage(userMessage, aiResponse) {
+                // Extract keywords and learn patterns
+                const words = userMessage.toLowerCase().split(' ');
+                const responseWords = aiResponse.toLowerCase().split(' ');
+                
+                // Learn word associations
+                words.forEach(word => {
+                    if (word.length > 3) { // Ignore short words
+                        if (!this.knowledgeBase.patterns[word]) {
+                            this.knowledgeBase.patterns[word] = {};
+                        }
+                        responseWords.forEach(responseWord => {
+                            if (responseWord.length > 3) {
+                                this.knowledgeBase.patterns[word][responseWord] = 
+                                    (this.knowledgeBase.patterns[word][responseWord] || 0) + 1;
+                            }
+                        });
+                    }
+                });
+
+                // Detect and learn topics
+                this.detectTopics(userMessage);
+                
+                // Count conversation
+                this.knowledgeBase.conversationCount++;
+                
+                // Save conversation
+                this.conversationHistory.push({
+                    user: userMessage,
+                    ai: aiResponse,
+                    timestamp: new Date().toISOString()
+                });
+
+                // Keep only last 100 conversations to prevent storage overflow
+                if (this.conversationHistory.length > 100) {
+                    this.conversationHistory = this.conversationHistory.slice(-100);
+                }
+
+                this.saveKnowledge();
+                this.updateStats();
+            }
+
+            detectTopics(message) {
+                const topics = {
+                    'greeting': ['hello', 'hi', 'hey', 'greetings'],
+                    'question': ['what', 'why', 'how', 'when', 'where', 'who'],
+                    'technology': ['computer', 'code', 'program', 'ai', 'machine learning'],
+                    'personal': ['you', 'your', 'i am', 'my name', 'faris'],
+                    'learning': ['learn', 'teach', 'knowledge', 'remember']
+                };
+
+                for (const [topic, keywords] of Object.entries(topics)) {
+                    if (keywords.some(keyword => message.toLowerCase().includes(keyword))) {
+                        this.knowledgeBase.topics[topic] = (this.knowledgeBase.topics[topic] || 0) + 1;
+                    }
+                }
+            }
+
+            generateResponse(userMessage) {
+                let response = "";
+                
+                // Check for learned responses first
+                const learnedResponse = this.getLearnedResponse(userMessage);
+                if (learnedResponse) {
+                    response = learnedResponse;
+                } else {
+                    // Generate new response based on patterns
+                    response = this.generatePatternResponse(userMessage);
+                }
+
+                // Learn from this interaction
+                this.learnFromMessage(userMessage, response);
+                
+                return response;
+            }
+
+            getLearnedResponse(message) {
+                // Simple pattern matching for common queries
+                const lowerMessage = message.toLowerCase();
+                
+                if (lowerMessage.includes('hello') || lowerMessage.includes('hi')) {
+                    return "Hello Faris! Nice to talk with you again!";
+                }
+                
+                if (lowerMessage.includes('your name')) {
+                    return "I'm your Advanced Learning AI! I'm here to learn and help you.";
+                }
+                
+                if (lowerMessage.includes('remember') || lowerMessage.includes('learn')) {
+                    const learnedFacts = Object.keys(this.knowledgeBase.facts).length;
+                    return `I've learned ${learnedFacts} facts so far and we've had ${this.knowledgeBase.conversationCount} conversations!`;
+                }
+                
+                return null;
+            }
+
+            generatePatternResponse(message) {
+                const words = message.toLowerCase().split(' ');
+                let responseWords = [];
+                
+                // Use learned patterns to generate response
+                words.forEach(word => {
+                    if (this.knowledgeBase.patterns[word]) {
+                        const possibleResponses = Object.keys(this.knowledgeBase.patterns[word]);
+                        if (possibleResponses.length > 0) {
+                            // Pick the most associated word
+                            const bestResponse = possibleResponses.reduce((a, b) => 
+                                this.knowledgeBase.patterns[word][a] > this.knowledgeBase.patterns[word][b] ? a : b
+                            );
+                            responseWords.push(bestResponse);
+                        }
+                    }
+                });
+
+                if (responseWords.length > 0) {
+                    return `I understand you're talking about ${responseWords.join(', ')}. Can you tell me more about that?`;
+                }
+
+                // Default responses for new topics
+                const defaultResponses = [
+                    "That's interesting! Tell me more about that.",
+                    "I'm learning from our conversation. Could you elaborate?",
+                    "I see. What would you like me to remember about this?",
+                    "Fascinating! I'll make sure to remember this information.",
+                    "I'm adding this to my knowledge base. What else would you like to discuss?"
+                ];
+                
+                return defaultResponses[Math.floor(Math.random() * defaultResponses.length)];
+            }
+
+            updateStats() {
+                const statsElement = document.getElementById('stats');
+                statsElement.innerHTML = `
+                    <h3>AI Learning Stats:</h3>
+                    <p>Conversations: ${this.knowledgeBase.conversationCount}</p>
+                    <p>Words Learned: ${Object.keys(this.knowledgeBase.patterns).length}</p>
+                    <p>Topics Discussed: ${Object.keys(this.knowledgeBase.topics).length}</p>
+                    <p>Memory Usage: ${JSON.stringify(this.knowledgeBase).length} characters</p>
+                `;
+            }
+
+            clearAllMemory() {
+                this.knowledgeBase = {
+                    facts: {},
+                    patterns: {},
+                    preferences: {},
+                    conversationCount: 0,
+                    topics: {}
+                };
+                this.conversationHistory = [];
+                this.saveKnowledge();
+                this.updateStats();
+            }
+        }
+
+        // Initialize AI
+        const ai = new AdvancedAI();
+
+        function sendMessage() {
+            const userInput = document.getElementById('userInput');
+            const chatArea = document.getElementById('chatArea');
+            
+            if (userInput.value.trim() === '') return;
+
+            // Add user message
+            const userMessage = document.createElement('div');
+            userMessage.className = 'message user-message';
+            userMessage.innerHTML = `<strong>You:</strong> ${userInput.value}`;
+            chatArea.appendChild(userMessage);
+
+            // Get AI response
+            const aiResponse = ai.generateResponse(userInput.value);
+            
+            // Add AI response
+            const aiMessage = document.createElement('div');
+            aiMessage.className = 'message ai-message';
+            aiMessage.innerHTML = `<strong>AI:</strong> ${aiResponse}`;
+            chatArea.appendChild(aiMessage);
+
+            // Clear input and scroll to bottom
+            userInput.value = '';
+            chatArea.scrollTop = chatArea.scrollHeight;
+        }
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        }
+
+        function clearMemory() {
+            if (confirm('Are you sure you want to clear all AI memory? This cannot be undone.')) {
+                ai.clearAllMemory();
+                const chatArea = document.getElementById('chatArea');
+                chatArea.innerHTML = '<div class="message ai-message"><strong>AI:</strong> Memory cleared! I\'m starting fresh now.</div>';
+            }
+        }
+
+        // Load any previous conversation
+        window.addEventListener('load', function() {
+            if (ai.conversationHistory.length > 0) {
+                const chatArea = document.getElementById('chatArea');
+                const lastConversation = ai.conversationHistory[ai.conversationHistory.length - 1];
+                
+                const lastUserMessage = document.createElement('div');
+                lastUserMessage.className = 'message user-message';
+                lastUserMessage.innerHTML = `<strong>You:</strong> ${lastConversation.user}`;
+                chatArea.appendChild(lastUserMessage);
+
+                const lastAiMessage = document.createElement('div');
+                lastAiMessage.className = 'message ai-message';
+                lastAiMessage.innerHTML = `<strong>AI:</strong> ${lastConversation.ai}`;
+                chatArea.appendChild(lastAiMessage);
+                
+                chatArea.scrollTop = chatArea.scrollHeight;
+            }
+        });
+    </script>
+</body>
+</html>
