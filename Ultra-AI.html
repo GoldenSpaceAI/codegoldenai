@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>GoldenSpaceAI • Advanced AI Models</title>
+<title>GoldenSpaceAI • Ultra AI (Gemini 2.5 Pro)</title>
 <meta name="color-scheme" content="dark light" />
 <link rel="icon" href="/favicon.ico"/>
 
@@ -64,29 +64,13 @@
   .unlock input{width:100%; padding:10px 12px; border-radius:10px; border:1px solid var(--line); background:transparent; color:var(--text)}
   .unlock button{align-self:flex-end}
 
-  /* Model buttons */
-  .model-buttons{display:flex;flex-direction:column;gap:8px;margin-top:12px}
-  .model-btn{padding:12px;border:1px solid var(--line);border-radius:12px;background:transparent;color:var(--text);
-    cursor:pointer;text-align:left;transition:all 0.2s;font-weight:600}
-  .model-btn:hover{background:rgba(122,166,255,.1);border-color:var(--accent)}
-  .model-btn.active{background:rgba(122,166,255,.15);border-color:var(--accent);color:var(--accent)}
-  .model-btn .model-name{font-weight:800;margin-bottom:4px}
-  .model-btn .model-desc{font-size:12px;color:var(--muted)}
-
-  /* Image upload */
-  .image-upload{margin-top:12px;padding:12px;border:1px dashed var(--line);border-radius:12px}
-  .upload-btn{width:100%;padding:10px;border-radius:10px;border:1px solid var(--line);background:transparent;color:var(--text);
-    cursor:pointer;margin-bottom:8px;text-align:center}
-  .upload-btn:hover{background:rgba(246,198,74,.1)}
-  .image-preview{max-width:100%;max-height:200px;border-radius:8px;margin-top:8px;display:none}
-
   /* Chat area */
   .chatwrap{
     background:linear-gradient(180deg,var(--panel),var(--panel2));
     border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow);
     display:flex; flex-direction:column; min-height:68vh; overflow:hidden
   }
-  .msgs{padding:20px; overflow:auto; max-height:65vh; flex:1}
+  .msgs{padding:20px; overflow:auto; max-height:65vh}
   .msg{max-width:min(820px,92%); padding:14px 16px; border-radius:16px; margin:8px 0; line-height:1.6; border:1px solid var(--line)}
   .msg.ai{ background:rgba(122,166,255,.08) }
   .msg.user{ background:rgba(246,198,74,.12); margin-left:auto }
@@ -94,7 +78,6 @@
   .code{background:#0e1626; color:#eaf1ff; padding:12px; border-radius:10px; overflow:auto; font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:.92rem}
   .warn{display:inline-flex; align-items:center; gap:8px; color:#1c1504; background:linear-gradient(180deg,#ffd56a,#f6c64a);
         border-radius:12px; padding:6px 10px; font-weight:900}
-  .msg-image{max-width:300px;max-height:300px;border-radius:12px;margin:8px 0}
 
   .composer{display:flex; gap:10px; padding:12px; border-top:1px solid var(--line); background:rgba(0,0,0,.04)}
   .composer textarea{flex:1; resize:none; min-height:56px; max-height:140px; padding:12px 14px; border-radius:12px;
@@ -108,99 +91,47 @@
 
   .toast{position:fixed; right:14px; bottom:14px; background:#0d1525; border:1px solid var(--line); color:#ffdca1; padding:10px 12px; border-radius:10px; box-shadow:var(--shadow); opacity:0; transform:translateY(6px); transition:.25s}
   .toast.show{opacity:1; transform:translateY(0)}
-
-  /* Password screen */
-  .password-screen{position:fixed;top:0;left:0;width:100%;height:100%;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:100}
-  .password-box{background:var(--panel);padding:30px;border-radius:var(--radius);border:1px solid var(--line);box-shadow:var(--shadow);max-width:400px;width:90%}
-  .password-box h2{text-align:center;margin-bottom:20px}
-  .password-input{width:100%;padding:12px;border-radius:10px;border:1px solid var(--line);background:transparent;color:var(--text);margin-bottom:12px}
 </style>
 </head>
 <body>
 
-<!-- Password Screen -->
-<div id="passwordScreen" class="password-screen">
-  <div class="password-box">
-    <h2>Enter Password to Unlock</h2>
-    <input type="password" id="passwordInput" class="password-input" placeholder="Enter password ending with 43096@" />
-    <button id="passwordSubmit" class="pill go" style="width:100%">Unlock</button>
-    <div id="passwordError" style="color:var(--err);text-align:center;margin-top:8px;display:none">Invalid password. Must end with 43096@</div>
-  </div>
-</div>
-
-<header style="display:none" id="mainHeader">
+<header>
   <div class="top">
     <div class="brand"><span class="orb"></span> GoldenSpaceAI</div>
-    <span class="badge" id="currentModelBadge">ULTRA • Gemini 2.5 Pro</span>
+    <span class="badge">ULTRA • Gemini 2.5 Pro</span>
     <div class="sp"></div>
     <a class="pill" href="/index.html">Home</a>
     <button id="newChat" class="pill">New Chat</button>
   </div>
 </header>
 
-<main style="display:none" id="mainContent">
+<main>
   <!-- LEFT SIDEBAR -->
   <aside class="side">
-    <div class="stat"><i>◎</i> <div><strong>Model:</strong> <span id="currentModelName">Gemini 2.5 Pro</span><br><small style="color:var(--muted)">Premium reasoning & fidelity</small></div></div>
+    <div class="stat"><i>◎</i> <div><strong>Model:</strong> Gemini 2.5 Pro<br><small style="color:var(--muted)">Premium reasoning & fidelity</small></div></div>
     <div class="stat"><i>⚡</i> <div><strong>Status:</strong> <span id="status">Ready</span></div></div>
-    
-    <div class="model-buttons">
-      <button class="model-btn active" data-model="gemini2.5-pro">
-        <div class="model-name">Gemini 2.5 Pro</div>
-        <div class="model-desc">Advanced reasoning & analysis</div>
-      </button>
-      <button class="model-btn" data-model="gemini-flash">
-        <div class="model-name">Gemini Flash</div>
-        <div class="model-desc">Fast response & efficiency</div>
-      </button>
-      <button class="model-btn" data-model="gpt4.1">
-        <div class="model-name">GPT-4.1</div>
-        <div class="model-desc">Enhanced GPT-4 capabilities</div>
-      </button>
-      <button class="model-btn" data-model="gpt40-mini">
-        <div class="model-name">GPT-40 Mini</div>
-        <div class="model-desc">Balanced speed & intelligence</div>
-      </button>
-      <button class="model-btn" data-model="deepseek-chat">
-        <div class="model-name">DeepSeek Chat</div>
-        <div class="model-desc">General purpose AI assistant</div>
-      </button>
-      <button class="model-btn" data-model="deepseek-coder">
-        <div class="model-name">DeepSeek Coder</div>
-        <div class="model-desc">Specialized programming AI</div>
-      </button>
-    </div>
-
-    <div class="image-upload">
-      <div style="font-weight:900;margin-bottom:8px">Image Upload</div>
-      <input type="file" id="imageUpload" accept="image/*" style="display:none"/>
-      <button class="upload-btn" id="uploadTrigger">📷 Upload Image</button>
-      <img id="imagePreview" class="image-preview"/>
-      <small style="color:var(--muted);display:block;text-align:center">AI will analyze uploaded images</small>
-    </div>
-
     <div class="unlock">
       <div style="font-weight:900">Unlock Ultra</div>
-      <small style="color:var(--muted)">Enter your unlock code (If you don't have a code please upgrade your plan to pro to get one). Saved to this device only.</small>
+      <small style="color:var(--muted)">Enter your unlock code ( If you dint have a code please upgrade your plan to pro to get one). Saved to this device only.</small>
       <input id="unlock" placeholder="Enter unlock code"/>
       <button id="unlockBtn" class="pill go">Unlock</button>
       <small id="unlockNote" style="color:var(--muted)"></small>
     </div>
-    <div class="stat"><i>ℹ︎</i> <div><strong>Tip:</strong> Paste code or files; AI will explain and improve them.</div></div>
+    <div class="stat"><i>ℹ︎</i> <div><strong>Tip:</strong> Paste code or files; Ultra will explain and improve them.</div></div>
   </aside>
 
   <!-- CHAT PANE -->
   <section class="chatwrap">
     <div id="stream" class="msgs">
       <div class="msg ai">
-        <small id="currentAILabel">Ultra AI</small>
-        Welcome to <b>Advanced AI Models</b>. Select a model from the left panel and start chatting!  
-        <div style="margin-top:8px" class="warn">💎 AI active • Multiple models available</div>
+        <small>Ultra AI</small>
+        Welcome to <b>Ultra AI</b>. Ask complex, multi-step questions — I’ll respond with structured, professional answers.  
+        <div style="margin-top:8px" class="warn">💎 Ultra active • Gemini 2.5 Pro</div>
       </div>
     </div>
 
     <div class="composer">
-      <textarea id="prompt" placeholder="Ask anything... (Shift+Enter = newline)"></textarea>
+      <textarea id="prompt" placeholder="Ask anything premium… (Shift+Enter = newline)"></textarea>
       <button id="send" class="btn send">Send ➤</button>
     </div>
   </section>
@@ -209,40 +140,8 @@
 <div id="toast" class="toast">Saved</div>
 
 <script>
-  // ========= Password Protection =========
-  const passwordScreen = document.getElementById('passwordScreen');
-  const passwordInput = document.getElementById('passwordInput');
-  const passwordSubmit = document.getElementById('passwordSubmit');
-  const passwordError = document.getElementById('passwordError');
-  const mainHeader = document.getElementById('mainHeader');
-  const mainContent = document.getElementById('mainContent');
-
-  function checkPassword() {
-    const password = passwordInput.value.trim();
-    if (password.endsWith('43096@')) {
-      passwordScreen.style.display = 'none';
-      mainHeader.style.display = 'block';
-      mainContent.style.display = 'grid';
-      localStorage.setItem('gsai_advanced_unlocked', 'true');
-    } else {
-      passwordError.style.display = 'block';
-    }
-  }
-
-  // Check if already unlocked
-  if (localStorage.getItem('gsai_advanced_unlocked') === 'true') {
-    passwordScreen.style.display = 'none';
-    mainHeader.style.display = 'block';
-    mainContent.style.display = 'grid';
-  }
-
-  passwordSubmit.addEventListener('click', checkPassword);
-  passwordInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') checkPassword();
-  });
-
   // ========= Config =========
-  let CURRENT_BACKEND = "/api/generate-gemini2.5-pro";   // default backend route
+  const BACKEND = "/api/generate-ultra";   // backend route
   const KEY_ENDING = "777999888654";       // unlock ending
   const STORE_KEY  = "gsai:ultra:unlock";  // localStorage key
 
@@ -256,35 +155,9 @@
   const unlockN = document.getElementById("unlockNote");
   const newChat = document.getElementById("newChat");
   const toast   = document.getElementById("toast");
-  const currentModelBadge = document.getElementById("currentModelBadge");
-  const currentModelName = document.getElementById("currentModelName");
-  const currentAILabel = document.getElementById("currentAILabel");
-  const imageUpload = document.getElementById("imageUpload");
-  const uploadTrigger = document.getElementById("uploadTrigger");
-  const imagePreview = document.getElementById("imagePreview");
-
-  // Model endpoints mapping
-  const MODEL_ENDPOINTS = {
-    "gemini2.5-pro": "/api/generate-gemini2.5-pro",
-    "gemini-flash": "/api/generate-gemini-flash",
-    "gpt4.1": "/api/generate-gpt4.1",
-    "gpt40-mini": "/api/generate-gpt40-mini",
-    "deepseek-chat": "/api/generate-deepseek-chat",
-    "deepseek-coder": "/api/generate-deepseek-coder"
-  };
-
-  const MODEL_NAMES = {
-    "gemini2.5-pro": "Gemini 2.5 Pro",
-    "gemini-flash": "Gemini Flash", 
-    "gpt4.1": "GPT-4.1",
-    "gpt40-mini": "GPT-40 Mini",
-    "deepseek-chat": "DeepSeek Chat",
-    "deepseek-coder": "DeepSeek Coder"
-  };
 
   // ========= NEW: in-browser chat memory (last 20) =========
   let messages = []; // { role: "user" | "assistant", content: "..." }
-  let currentImageUrl = null;
 
   // ========= Unlock =========
   const saved = localStorage.getItem(STORE_KEY) || "";
@@ -312,82 +185,6 @@
     unlockN.textContent = "Ultra unlocked on this device.";
     unlockN.style.color = "var(--good)";
     showToast("Ultra unlocked");
-  });
-
-  // ========= Model Selection =========
-  document.querySelectorAll('.model-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      // Remove active class from all buttons
-      document.querySelectorAll('.model-btn').forEach(b => b.classList.remove('active'));
-      // Add active class to clicked button
-      btn.classList.add('active');
-      
-      const model = btn.dataset.model;
-      CURRENT_BACKEND = MODEL_ENDPOINTS[model];
-      const modelName = MODEL_NAMES[model];
-      
-      // Update UI
-      currentModelBadge.textContent = `ADVANCED • ${modelName}`;
-      currentModelName.textContent = modelName;
-      currentAILabel.textContent = modelName;
-      
-      showToast(`Switched to ${modelName}`);
-    });
-  });
-
-  // ========= Image Upload =========
-  uploadTrigger.addEventListener('click', () => {
-    imageUpload.click();
-  });
-
-  imageUpload.addEventListener('change', async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    if (!file.type.startsWith('image/')) {
-      showToast('Please select an image file');
-      return;
-    }
-
-    if (file.size > 10 * 1024 * 1024) {
-      showToast('Image must be less than 10MB');
-      return;
-    }
-
-    const formData = new FormData();
-    formData.append('image', file);
-
-    try {
-      statusE.textContent = "Uploading image...";
-      const response = await fetch('/api/upload-image', {
-        method: 'POST',
-        body: formData
-      });
-
-      const data = await response.json();
-      
-      if (data.success) {
-        currentImageUrl = data.imageUrl;
-        imagePreview.src = data.imageUrl;
-        imagePreview.style.display = 'block';
-        showToast('Image uploaded successfully');
-        
-        // Add image to chat
-        addUser(`[Uploaded image: ${file.name}]`);
-        const imgMsg = document.createElement('img');
-        imgMsg.src = data.imageUrl;
-        imgMsg.className = 'msg-image';
-        stream.appendChild(imgMsg);
-        stream.scrollTop = stream.scrollHeight;
-      } else {
-        showToast('Image upload failed');
-      }
-    } catch (error) {
-      console.error('Upload error:', error);
-      showToast('Upload failed');
-    } finally {
-      statusE.textContent = "Ready";
-    }
   });
 
   // ========= Chat helpers =========
@@ -437,42 +234,33 @@
     if(!requireAccess()) return;
 
     addUser(q);
-    
-    // Prepare message with image context if available
-    let messageContent = q;
-    if (currentImageUrl) {
-      messageContent = `[User uploaded an image: ${currentImageUrl}]\n\n${q}`;
-      currentImageUrl = null; // Reset after use
-      imagePreview.style.display = 'none';
-    }
-    
-    messages.push({ role:"user", content: messageContent });
+    messages.push({ role:"user", content:q });           // store user msg
     const row = addSpinner();
     sendBtn.disabled = true; statusE.textContent = "Working…";
 
     try{
-      const r = await fetch(CURRENT_BACKEND, {
+      const r = await fetch(BACKEND, {
         method:"POST",
         headers:{"Content-Type":"application/json"},
-        body: JSON.stringify({ messages: messages.slice(-20) })
+        body: JSON.stringify({ messages: messages.slice(-20) }) // send last 20
       });
 
       if(!r.ok){
         stream.removeChild(row);
-        addAI(`<div class="warn">⚠️ API Error (${r.status})</div>`);
+        addAI(`<div class="warn">⚠️ No reply from Ultra AI. (${r.status})</div>`);
       }else{
         const j = await r.json();
         stream.removeChild(row);
 
         const text = (j.text || j.reply || j.answer || "").trim();
         if(!text){
-          addAI(`<div class="warn">⚠️ No reply from AI.</div>`);
+          addAI(`<div class="warn">⚠️ No reply from Ultra AI.</div>`);
         }else{
           const html = escapeHtml(text)
             .replace(/```([\s\S]*?)```/g, (_m, p1) => `<pre class="code">${escapeHtml(p1).trim()}</pre>`)
             .replace(/\n/g,"<br/>");
           addAI(html);
-          messages.push({ role:"assistant", content:text });
+          messages.push({ role:"assistant", content:text }); // store AI reply
         }
       }
     }catch(e){
@@ -491,10 +279,8 @@
   });
   newChat.addEventListener("click", ()=>{
     stream.innerHTML = "";
-    addAI('New chat started. <span class="warn">💎 AI active • Multiple models available</span>');
+    addAI('New chat started. <span class="warn">💎 Ultra active • Gemini 2.5 Pro</span>');
     messages = []; // reset history
-    currentImageUrl = null;
-    imagePreview.style.display = 'none';
   });
 </script>
 </body>
