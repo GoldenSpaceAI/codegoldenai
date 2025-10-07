@@ -148,11 +148,16 @@ app.post("/api/generate-advanced", async (req, res) => {
     res.status(500).json({ error: "Error generating response." });
   }
 });
+
 // DeepSeek Chat - General Purpose
 app.post("/api/generate-deepseek-chat", async (req, res) => {
   try {
     const { messages } = req.body;
     
+    if (!messages || !Array.isArray(messages)) {
+      return res.status(400).json({ error: "No messages provided or invalid format." });
+    }
+
     const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -171,6 +176,16 @@ app.post("/api/generate-deepseek-chat", async (req, res) => {
     });
 
     const data = await response.json();
+    
+    // Check if the response has the expected structure
+    if (!data.choices || !Array.isArray(data.choices) || data.choices.length === 0) {
+      console.error("DeepSeek Chat API response error:", data);
+      return res.status(500).json({ 
+        error: "AI service returned unexpected response",
+        details: data.error?.message || "No choices in response"
+      });
+    }
+
     res.json({ 
       text: data.choices[0]?.message?.content || "No response.",
       model: "DeepSeek Chat"
@@ -178,7 +193,10 @@ app.post("/api/generate-deepseek-chat", async (req, res) => {
     
   } catch (err) {
     console.error("DeepSeek Chat error:", err);
-    res.status(500).json({ error: "AI service error" });
+    res.status(500).json({ 
+      error: "AI service error",
+      details: err.message 
+    });
   }
 });
 
@@ -187,6 +205,10 @@ app.post("/api/generate-deepseek-coder", async (req, res) => {
   try {
     const { messages } = req.body;
     
+    if (!messages || !Array.isArray(messages)) {
+      return res.status(400).json({ error: "No messages provided or invalid format." });
+    }
+
     const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -205,6 +227,16 @@ app.post("/api/generate-deepseek-coder", async (req, res) => {
     });
 
     const data = await response.json();
+    
+    // Check if the response has the expected structure
+    if (!data.choices || !Array.isArray(data.choices) || data.choices.length === 0) {
+      console.error("DeepSeek Coder API response error:", data);
+      return res.status(500).json({ 
+        error: "AI service returned unexpected response",
+        details: data.error?.message || "No choices in response"
+      });
+    }
+
     res.json({ 
       text: data.choices[0]?.message?.content || "No response.",
       model: "DeepSeek Coder"
@@ -212,9 +244,14 @@ app.post("/api/generate-deepseek-coder", async (req, res) => {
     
   } catch (err) {
     console.error("DeepSeek Coder error:", err);
-    res.status(500).json({ error: "AI service error" });
+    res.status(500).json({ 
+      error: "AI service error",
+      details: err.message 
+    });
   }
-});// Ultra AI (Gemini 2.5 Pro) with memory of last 20 messages
+});
+
+// Ultra AI (Gemini 2.5 Pro) with memory of last 20 messages
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 app.post("/api/generate-ultra", async (req, res) => {
