@@ -114,6 +114,7 @@
             transition: all 0.2s;
             display: flex;
             align-items: center;
+            justify-content: space-between;
             gap: 10px;
         }
 
@@ -125,8 +126,35 @@
             background-color: rgba(67, 97, 238, 0.2);
         }
 
+        .chat-item-content {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex: 1;
+        }
+
         .chat-item i {
             color: var(--gray);
+        }
+
+        .delete-chat-btn {
+            background: none;
+            border: none;
+            color: var(--gray);
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 4px;
+            opacity: 0;
+            transition: all 0.2s;
+        }
+
+        .chat-item:hover .delete-chat-btn {
+            opacity: 1;
+        }
+
+        .delete-chat-btn:hover {
+            color: var(--warning);
+            background: rgba(247, 37, 133, 0.1);
         }
 
         .main-content {
@@ -583,6 +611,54 @@
             display: none;
         }
 
+        /* Secret Lock Screen */
+        .secret-lock-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--dark);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+
+        .secret-lock-box {
+            background: var(--darker);
+            padding: 40px;
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+        }
+
+        .secret-lock-box h2 {
+            margin-bottom: 20px;
+            color: var(--accent);
+        }
+
+        .secret-code-input {
+            width: 100%;
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--light);
+            font-size: 16px;
+            margin-bottom: 15px;
+            outline: none;
+        }
+
+        .secret-code-error {
+            color: var(--warning);
+            margin-bottom: 15px;
+            display: none;
+        }
+
         /* Scrollbar styling */
         ::-webkit-scrollbar {
             width: 6px;
@@ -610,6 +686,16 @@
             <input type="password" class="password-input" id="passwordInput" placeholder="Enter password ending with 43096@" />
             <div class="password-error" id="passwordError">Invalid password. Must end with 43096@</div>
             <button class="modal-btn primary" id="passwordSubmit" style="width: 100%;">Unlock</button>
+        </div>
+    </div>
+
+    <!-- Secret Lock Screen -->
+    <div class="secret-lock-screen" id="secretLockScreen">
+        <div class="secret-lock-box">
+            <h2>Secret Access Required</h2>
+            <input type="password" class="secret-code-input" id="secretCodeInput" placeholder="Enter secret code" />
+            <div class="secret-code-error" id="secretCodeError">Invalid secret code</div>
+            <button class="modal-btn primary" id="secretCodeSubmit" style="width: 100%;">Unlock Advanced AI</button>
         </div>
     </div>
 
@@ -646,7 +732,6 @@
                 <button class="model-btn" data-model="gpt-4.1">GPT-4.1</button>
                 <button class="model-btn" data-model="gpt-40-mini">GPT-40 Mini</button>
                 <button class="model-btn" data-model="gemini2.5-pro">Gemini 2.5 Pro</button>
-                <button class="model-btn" data-model="gemini-flash">Gemini Flash</button>
                 <button class="model-btn" data-model="deepseek-chat">DeepSeek Chat</button>
                 <button class="model-btn" data-model="deepseek-coder">DeepSeek Coder</button>
             </div>        
@@ -656,9 +741,9 @@
             <div class="message ai-message">
                 <div class="message-header">
                     <i class="fas fa-robot"></i>
-                    <span>Advanced AI</span>
+                    <span id="currentModelDisplay">GPT-5</span>
                 </div>
-                Hello! I'm your Advanced AI Assistant. How can I help you today?
+                Welcome to Advanced AI Assistant! I'm powered by <strong>GPT-5</strong>. How can I help you today?
             </div>
         </div>
 
@@ -712,11 +797,18 @@
     <input type="file" id="fileInput" class="file-input" accept="image/*">
 
     <script>
+        // ========= SECRET LOCK CONFIG =========
+        const SECRET_CODE = "ADVANCEDAI2024"; // Change this to your preferred secret code
+
         // ========= PASSWORD PROTECTION =========
         const passwordScreen = document.getElementById('passwordScreen');
         const passwordInput = document.getElementById('passwordInput');
         const passwordSubmit = document.getElementById('passwordSubmit');
         const passwordError = document.getElementById('passwordError');
+        const secretLockScreen = document.getElementById('secretLockScreen');
+        const secretCodeInput = document.getElementById('secretCodeInput');
+        const secretCodeSubmit = document.getElementById('secretCodeSubmit');
+        const secretCodeError = document.getElementById('secretCodeError');
         const mainSidebar = document.getElementById('mainSidebar');
         const mainContent = document.getElementById('mainContent');
 
@@ -724,27 +816,45 @@
             const password = passwordInput.value.trim();
             if (password.endsWith('43096@')) {
                 passwordScreen.style.display = 'none';
+                // Show secret lock screen after password
+                secretLockScreen.style.display = 'flex';
+            } else {
+                passwordError.style.display = 'block';
+            }
+        }
+
+        function checkSecretCode() {
+            const code = secretCodeInput.value.trim();
+            if (code === SECRET_CODE) {
+                secretLockScreen.style.display = 'none';
                 mainSidebar.style.display = 'flex';
                 mainContent.style.display = 'flex';
                 localStorage.setItem('advanced_ai_unlocked', 'true');
                 initApp();
             } else {
-                passwordError.style.display = 'block';
+                secretCodeError.style.display = 'block';
             }
         }
 
         // Check if already unlocked
         if (localStorage.getItem('advanced_ai_unlocked') === 'true') {
             passwordScreen.style.display = 'none';
+            secretLockScreen.style.display = 'none';
             mainSidebar.style.display = 'flex';
             mainContent.style.display = 'flex';
-            // Initialize app after DOM is loaded
             setTimeout(initApp, 100);
+        } else {
+            passwordScreen.style.display = 'flex';
         }
 
         passwordSubmit.addEventListener('click', checkPassword);
         passwordInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') checkPassword();
+        });
+
+        secretCodeSubmit.addEventListener('click', checkSecretCode);
+        secretCodeInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') checkSecretCode();
         });
 
         // ========= MAIN APP CODE =========
@@ -767,6 +877,7 @@
             const uploadImageBtn = document.getElementById('uploadImageBtn');
             const fileInput = document.getElementById('fileInput');
             const chatHistory = document.getElementById('chatHistory');
+            const currentModelDisplay = document.getElementById('currentModelDisplay');
 
             // Chat state
             let currentChatId = null;
@@ -777,7 +888,7 @@
             let recognition = null;
             let currentImageUrl = null;
             
-            // Model endpoints mapping - UPDATED WITH GPT-5 MODELS
+            // Model endpoints mapping - UPDATED WITHOUT GEMINI FLASH
             const modelEndpoints = {
                 // GPT-5 Family
                 'gpt-5': '/api/generate-gpt5',
@@ -788,9 +899,20 @@
                 'gpt-4.1': '/api/generate-gpt4.1',
                 'gpt-40-mini': '/api/generate-gpt40-mini', 
                 'gemini2.5-pro': '/api/generate-gemini2.5-pro',
-                'gemini-flash': '/api/generate-gemini-flash',
                 'deepseek-chat': '/api/generate-deepseek-chat',
                 'deepseek-coder': '/api/generate-deepseek-coder'
+            };
+
+            // Model display names
+            const modelDisplayNames = {
+                'gpt-5': 'GPT-5',
+                'gpt-5-mini': 'GPT-5 Mini',
+                'gpt-5-nano': 'GPT-5 Nano',
+                'gpt-4.1': 'GPT-4.1',
+                'gpt-40-mini': 'GPT-40 Mini',
+                'gemini2.5-pro': 'Gemini 2.5 Pro',
+                'deepseek-chat': 'DeepSeek Chat',
+                'deepseek-coder': 'DeepSeek Coder'
             };
 
             // Initialize the app
@@ -804,6 +926,12 @@
                 }
                 initSpeechRecognition();
                 setupEventListeners();
+                updateModelDisplay();
+            }
+
+            // Update model display in header
+            function updateModelDisplay() {
+                currentModelDisplay.textContent = modelDisplayNames[currentModel] || currentModel;
             }
 
             // Initialize speech recognition
@@ -861,6 +989,7 @@
                         modelButtons.forEach(btn => btn.classList.remove('active'));
                         button.classList.add('active');
                         currentModel = button.dataset.model;
+                        updateModelDisplay();
                         if (currentChatId) {
                             chats[currentChatId].model = currentModel;
                             saveChats();
@@ -883,19 +1012,7 @@
                 imageGenBtn.addEventListener('click', () => {
                     const prompt = prompt('Describe the image you want to generate:');
                     if (prompt) {
-                        addMessageToChat(`Generate an image: ${prompt}`, 'user');
-                        showTypingIndicator();
-                        setTimeout(() => {
-                            removeTypingIndicator();
-                            // For demo - in production, this would call your image generation API
-                            const demoImages = [
-                                'https://images.unsplash.com/photo-1682687220742-aba13b6e50ba?ixlib=rb-4.0.3&ixid=M3wxMjA3fDF8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
-                                'https://images.unsplash.com/photo-1695758478666-0672b74a9fc6?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
-                                'https://images.unsplash.com/photo-1695653422714-d6f8cff4f3bd?ixlib=rb-4.0.3&ixid=M3wxMjA3fDF8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80'
-                            ];
-                            const randomImage = demoImages[Math.floor(Math.random() * demoImages.length)];
-                            addMessageToChat(`IMAGE:${randomImage}`, 'ai');
-                        }, 2000);
+                        generateImage(prompt);
                     }
                 });
                 
@@ -931,6 +1048,34 @@
                 });
             }
 
+            // Generate image function
+            async function generateImage(prompt) {
+                addMessageToChat(`Generate an image: ${prompt}`, 'user');
+                showTypingIndicator();
+
+                try {
+                    const response = await fetch('/api/generate-image', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ prompt: prompt })
+                    });
+
+                    const data = await response.json();
+                    removeTypingIndicator();
+
+                    if (data.success) {
+                        addMessageToChat(`IMAGE:${data.imageUrl}`, 'ai', 'image');
+                    } else {
+                        addMessageToChat(`Failed to generate image: ${data.error}`, 'ai');
+                    }
+                } catch (error) {
+                    removeTypingIndicator();
+                    addMessageToChat(`Error generating image: ${error.message}`, 'ai');
+                }
+            }
+
             // Load custom instructions
             function loadCustomInstructions() {
                 instructionsInput.value = customInstructions;
@@ -947,7 +1092,8 @@
                     messages: [
                         {
                             role: 'ai',
-                            content: "Hello! I'm your Advanced AI Assistant. How can I help you today?",
+                            content: `Welcome to Advanced AI Assistant! I'm powered by ${modelDisplayNames[currentModel]}. How can I help you today?`,
+                            model: currentModel,
                             timestamp: new Date().toISOString()
                         }
                     ],
@@ -958,6 +1104,23 @@
                 saveChats();
                 loadChatHistory();
                 loadChat(chatId);
+            }
+
+            // Delete a chat
+            function deleteChat(chatId) {
+                if (confirm('Are you sure you want to delete this chat? This action cannot be undone.')) {
+                    delete chats[chatId];
+                    if (currentChatId === chatId) {
+                        if (Object.keys(chats).length > 0) {
+                            currentChatId = Object.keys(chats)[0];
+                            loadChat(currentChatId);
+                        } else {
+                            createNewChat();
+                        }
+                    }
+                    saveChats();
+                    loadChatHistory();
+                }
             }
 
             // Save chats to localStorage
@@ -973,12 +1136,25 @@
                     const chatItem = document.createElement('div');
                     chatItem.className = `chat-item ${chat.id === currentChatId ? 'active' : ''}`;
                     chatItem.innerHTML = `
-                        <i class="fas fa-comment"></i>
-                        <span>${chat.title}</span>
+                        <div class="chat-item-content">
+                            <i class="fas fa-comment"></i>
+                            <span>${chat.title}</span>
+                        </div>
+                        <button class="delete-chat-btn" data-chat-id="${chat.id}">
+                            <i class="fas fa-trash"></i>
+                        </button>
                     `;
                     
-                    chatItem.addEventListener('click', () => {
-                        loadChat(chat.id);
+                    chatItem.addEventListener('click', (e) => {
+                        if (!e.target.closest('.delete-chat-btn')) {
+                            loadChat(chat.id);
+                        }
+                    });
+                    
+                    const deleteBtn = chatItem.querySelector('.delete-chat-btn');
+                    deleteBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        deleteChat(chat.id);
                     });
                     
                     chatHistory.appendChild(chatItem);
@@ -994,6 +1170,7 @@
                 
                 currentModel = chat.model;
                 updateModelButtons();
+                updateModelDisplay();
                 
                 chatContainer.innerHTML = '';
                 chat.messages.forEach(message => {
@@ -1040,7 +1217,8 @@
                         messageHeader.innerHTML = `<i class="fas fa-search"></i><span>Deep Research</span><span class="deep-search-badge">Comprehensive Analysis</span>`;
                         messageHeader.classList.add('deep-search-header');
                     } else {
-                        messageHeader.innerHTML = `<i class="fas fa-robot"></i><span>Advanced AI</span>`;
+                        const displayModel = modelDisplayNames[message.model] || message.model || currentModel;
+                        messageHeader.innerHTML = `<i class="fas fa-robot"></i><span>${displayModel}</span>`;
                     }
                 } else {
                     messageHeader.innerHTML = `<i class="fas fa-user"></i><span>You</span>`;
@@ -1064,6 +1242,17 @@
                         const textNode = document.createTextNode(message.content);
                         messageDiv.appendChild(textNode);
                     }
+                } else if (message.content.startsWith('IMAGE:')) {
+                    const imageUrl = message.content.substring(6);
+                    const imageContainer = document.createElement('div');
+                    imageContainer.className = 'image-container';
+                    
+                    const img = document.createElement('img');
+                    img.src = imageUrl;
+                    img.alt = 'Generated image';
+                    
+                    imageContainer.appendChild(img);
+                    messageDiv.appendChild(imageContainer);
                 } else if (message.content.includes('```')) {
                     const parts = message.content.split('```');
                     parts.forEach((part, index) => {
@@ -1095,17 +1284,6 @@
                             });
                         }
                     });
-                } else if (message.content.startsWith('IMAGE:')) {
-                    const imageUrl = message.content.substring(6);
-                    const imageContainer = document.createElement('div');
-                    imageContainer.className = 'image-container';
-                    
-                    const img = document.createElement('img');
-                    img.src = imageUrl;
-                    img.alt = 'Generated image';
-                    
-                    imageContainer.appendChild(img);
-                    messageDiv.appendChild(imageContainer);
                 } else {
                     const textNode = document.createTextNode(message.content);
                     messageDiv.appendChild(textNode);
@@ -1203,7 +1381,9 @@
                     const data = await response.json();
                     
                     removeTypingIndicator();
-                    addMessageToChat(data.text, 'ai', 'text', null, isDeepSearchMode);
+                    // Pass the actual model name from the response
+                    const responseModel = data.model || currentModel;
+                    addMessageToChat(data.text, 'ai', 'text', null, isDeepSearchMode, responseModel);
                     
                     if (isDeepSearchMode) {
                         isDeepSearchMode = false;
@@ -1213,12 +1393,12 @@
                 } catch (error) {
                     console.error('Error sending message:', error);
                     removeTypingIndicator();
-                    addMessageToChat("Sorry, I encountered an error. Please try again.", 'ai');
+                    addMessageToChat("Sorry, I encountered an error. Please try again.", 'ai', 'text', null, false, currentModel);
                 }
             }
 
             // Add message to current chat
-            function addMessageToChat(content, role, type = 'text', imageUrl = null, isDeepSearch = false) {
+            function addMessageToChat(content, role, type = 'text', imageUrl = null, isDeepSearch = false, modelName = null) {
                 if (!currentChatId) return;
                 
                 const message = {
@@ -1227,6 +1407,7 @@
                     type,
                     imageUrl,
                     isDeepSearch,
+                    model: modelName || currentModel, // Store which model was used
                     timestamp: new Date().toISOString()
                 };
                 
@@ -1268,7 +1449,7 @@
                 }
             }
 
-            // Handle image upload - FIXED VERSION
+            // Handle image upload
             async function handleImageUpload(e) {
                 const file = e.target.files[0];
                 if (file) {
@@ -1300,7 +1481,7 @@
                             
                             setTimeout(() => {
                                 removeTypingIndicator();
-                                addMessageToChat("I can see the image you uploaded! I can analyze it and provide information or answer questions about it. What would you like to know about this image?", 'ai');
+                                addMessageToChat("I can see the image you uploaded! I can analyze it and provide information or answer questions about it. What would you like to know about this image?", 'ai', 'text', null, false, currentModel);
                             }, 1500);
                         } else {
                             throw new Error(data.error || 'Upload failed');
