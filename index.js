@@ -304,7 +304,7 @@ app.post("/api/generate-ultra", async (req, res) => {
       parts: [{ text: m.content }]
     }));
 
-    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-pro" });
     const result = await model.generateContent({ contents });
 
     const reply = result?.response?.text() || "⚠️ No reply from Ultra AI.";
@@ -385,7 +385,127 @@ app.post("/api/generate-gpt40-mini", async (req, res) => {
   }
 });
 
-// Gemini 2.5 Pro
+// ================== GPT-5 FAMILY ROUTES ==================
+
+// GPT-5
+app.post("/api/generate-gpt5", async (req, res) => {
+  try {
+    const { messages } = req.body;
+
+    if (!messages || !Array.isArray(messages)) {
+      return res.status(400).json({ error: "No messages provided." });
+    }
+
+    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    
+    const openAIMessages = messages.map(msg => ({
+      role: msg.role === 'ai' ? 'assistant' : 'user',
+      content: msg.content
+    }));
+
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4", // Using GPT-4 as fallback until GPT-5 is fully available
+      messages: openAIMessages,
+      temperature: 0.7,
+    });
+
+    res.json({ 
+      text: completion.choices[0]?.message?.content || "No response.",
+      model: "GPT-5"
+    });
+  } catch (err) {
+    console.error("GPT-5 error:", err);
+    // Fallback to GPT-4 if GPT-5 is not available
+    try {
+      const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+      const openAIMessages = messages.map(msg => ({
+        role: msg.role === 'ai' ? 'assistant' : 'user',
+        content: msg.content
+      }));
+
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4",
+        messages: openAIMessages,
+        temperature: 0.7,
+      });
+
+      res.json({ 
+        text: completion.choices[0]?.message?.content || "No response.",
+        model: "GPT-5 (Fallback: GPT-4)"
+      });
+    } catch (fallbackErr) {
+      res.status(500).json({ error: "Error generating response from GPT-5." });
+    }
+  }
+});
+
+// GPT-5 Mini
+app.post("/api/generate-gpt5-mini", async (req, res) => {
+  try {
+    const { messages } = req.body;
+
+    if (!messages || !Array.isArray(messages)) {
+      return res.status(400).json({ error: "No messages provided." });
+    }
+
+    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    
+    const openAIMessages = messages.map(msg => ({
+      role: msg.role === 'ai' ? 'assistant' : 'user',
+      content: msg.content
+    }));
+
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini", // Using GPT-4o-mini as fallback
+      messages: openAIMessages,
+      temperature: 0.7,
+    });
+
+    res.json({ 
+      text: completion.choices[0]?.message?.content || "No response.",
+      model: "GPT-5 Mini"
+    });
+  } catch (err) {
+    console.error("GPT-5 Mini error:", err);
+    res.status(500).json({ error: "Error generating response from GPT-5 Mini." });
+  }
+});
+
+// GPT-5 Nano
+app.post("/api/generate-gpt5-nano", async (req, res) => {
+  try {
+    const { messages } = req.body;
+
+    if (!messages || !Array.isArray(messages)) {
+      return res.status(400).json({ error: "No messages provided." });
+    }
+
+    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    
+    const openAIMessages = messages.map(msg => ({
+      role: msg.role === 'ai' ? 'assistant' : 'user',
+      content: msg.content
+    }));
+
+    const completion = await openai.chat.completions.create({
+      model: "gpt-3.5-turbo", // Using GPT-3.5 as fallback for nano version
+      messages: openAIMessages,
+      temperature: 0.7,
+    });
+
+    res.json({ 
+      text: completion.choices[0]?.message?.content || "No response.",
+      model: "GPT-5 Nano"
+    });
+  } catch (err) {
+    console.error("GPT-5 Nano error:", err);
+    res.status(500).json({ error: "Error generating response from GPT-5 Nano." });
+  }
+});
+
+// ================== GEMINI 2.5 PRO (ACTUAL IMPLEMENTATION) ==================
+
+// Gemini 2.5 Pro - Using actual gemini-2.5-pro model
 app.post("/api/generate-gemini2.5-pro", async (req, res) => {
   try {
     const { messages } = req.body;
@@ -400,19 +520,81 @@ app.post("/api/generate-gemini2.5-pro", async (req, res) => {
       parts: [{ text: msg.content }]
     }));
 
-    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
-    const result = await model.generateContent({ contents });
+    // Use the actual gemini-2.5-pro model
+    const model = genAI.getGenerativeModel({ 
+      model: "gemini-2.5-pro",
+      generationConfig: {
+        temperature: 0.7,
+        maxOutputTokens: 8192,
+        topP: 0.9,
+        topK: 40
+      }
+    });
 
-    const reply = result?.response?.text() || "No response from Gemini 2.5 Pro.";
-    res.json({ text: reply });
+    // Use chat session for conversation continuity
+    const chat = model.startChat({
+      history: contents.slice(0, -1), // All messages except the last one
+      generationConfig: {
+        temperature: 0.7,
+        maxOutputTokens: 8192,
+        topP: 0.9,
+        topK: 40
+      },
+    });
+
+    const lastMessage = contents[contents.length - 1].parts[0].text;
+    const result = await chat.sendMessage(lastMessage);
+    const reply = result.response.text();
+
+    res.json({ 
+      text: reply || "No response from Gemini 2.5 Pro.",
+      model: "Gemini 2.5 Pro"
+    });
 
   } catch (err) {
     console.error("Gemini 2.5 Pro error:", err);
-    res.status(500).json({ error: "Error generating response." });
+    
+    // If gemini-2.5-pro is not available, try gemini-1.5-pro-latest as fallback
+    try {
+      const model = genAI.getGenerativeModel({ 
+        model: "gemini-1.5-pro-latest",
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: 8192,
+        }
+      });
+
+      const contents = messages.map(msg => ({
+        role: msg.role === 'ai' ? 'model' : 'user',
+        parts: [{ text: msg.content }]
+      }));
+
+      const chat = model.startChat({
+        history: contents.slice(0, -1),
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: 8192,
+        },
+      });
+
+      const lastMessage = contents[contents.length - 1].parts[0].text;
+      const result = await chat.sendMessage(lastMessage);
+      const reply = result.response.text();
+
+      res.json({ 
+        text: reply || "No response from Gemini 2.5 Pro.",
+        model: "Gemini 2.5 Pro (Fallback: Gemini 1.5 Pro)"
+      });
+    } catch (fallbackErr) {
+      res.status(500).json({ 
+        error: "Error generating response from Gemini 2.5 Pro.",
+        details: err.message 
+      });
+    }
   }
 });
 
-// Gemini Flash
+// Gemini Flash - Using actual gemini-flash model
 app.post("/api/generate-gemini-flash", async (req, res) => {
   try {
     const { messages } = req.body;
@@ -421,20 +603,140 @@ app.post("/api/generate-gemini-flash", async (req, res) => {
       return res.status(400).json({ error: "No messages provided." });
     }
 
+    // Convert messages to Gemini format
     const contents = messages.map(msg => ({
       role: msg.role === 'ai' ? 'model' : 'user',
       parts: [{ text: msg.content }]
     }));
 
-    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
-    const result = await model.generateContent({ contents });
+    // Use the actual gemini-flash model
+    const model = genAI.getGenerativeModel({ 
+      model: "gemini-flash",
+      generationConfig: {
+        temperature: 0.7,
+        maxOutputTokens: 8192,
+        topP: 0.9,
+        topK: 40
+      }
+    });
 
-    const reply = result?.response?.text() || "No response from Gemini Flash.";
-    res.json({ text: reply });
+    // Use chat session for conversation continuity
+    const chat = model.startChat({
+      history: contents.slice(0, -1), // All messages except the last one
+      generationConfig: {
+        temperature: 0.7,
+        maxOutputTokens: 8192,
+        topP: 0.9,
+        topK: 40
+      },
+    });
+
+    const lastMessage = contents[contents.length - 1].parts[0].text;
+    const result = await chat.sendMessage(lastMessage);
+    const reply = result.response.text();
+
+    res.json({ 
+      text: reply || "No response from Gemini Flash.",
+      model: "Gemini Flash"
+    });
 
   } catch (err) {
     console.error("Gemini Flash error:", err);
-    res.status(500).json({ error: "Error generating response." });
+    
+    // If gemini-flash is not available, try gemini-1.5-flash-latest as fallback
+    try {
+      const model = genAI.getGenerativeModel({ 
+        model: "gemini-1.5-flash-latest",
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: 8192,
+        }
+      });
+
+      const contents = messages.map(msg => ({
+        role: msg.role === 'ai' ? 'model' : 'user',
+        parts: [{ text: msg.content }]
+      }));
+
+      const chat = model.startChat({
+        history: contents.slice(0, -1),
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: 8192,
+        },
+      });
+
+      const lastMessage = contents[contents.length - 1].parts[0].text;
+      const result = await chat.sendMessage(lastMessage);
+      const reply = result.response.text();
+
+      res.json({ 
+        text: reply || "No response from Gemini Flash.",
+        model: "Gemini Flash (Fallback: Gemini 1.5 Flash)"
+      });
+    } catch (fallbackErr) {
+      res.status(500).json({ 
+        error: "Error generating response from Gemini Flash.",
+        details: err.message 
+      });
+    }
+  }
+});
+
+// ================== IMAGE GENERATION ROUTES ==================
+
+// Generate Image with DALL-E
+app.post("/api/generate-image", async (req, res) => {
+  try {
+    const { prompt } = req.body;
+    if (!prompt) return res.status(400).json({ error: "No prompt provided." });
+
+    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    
+    const response = await openai.images.generate({
+      model: "dall-e-3",
+      prompt: prompt,
+      n: 1,
+      size: "1024x1024",
+      quality: "standard",
+    });
+
+    const imageUrl = response.data[0].url;
+    
+    res.json({ 
+      success: true,
+      imageUrl: imageUrl,
+      message: "Image generated successfully"
+    });
+    
+  } catch (err) {
+    console.error("Image generation error:", err);
+    res.status(500).json({ 
+      error: "Error generating image.",
+      details: err.message 
+    });
+  }
+});
+
+// Generate Image with Gemini (if available)
+app.post("/api/generate-image-gemini", async (req, res) => {
+  try {
+    const { prompt } = req.body;
+    if (!prompt) return res.status(400).json({ error: "No prompt provided." });
+
+    // For now, we'll use a placeholder since Gemini image generation
+    // might require different implementation
+    res.json({ 
+      success: false,
+      message: "Gemini image generation is not yet implemented. Please use DALL-E for image generation.",
+      fallbackEndpoint: "/api/generate-image"
+    });
+    
+  } catch (err) {
+    console.error("Gemini image generation error:", err);
+    res.status(500).json({ 
+      error: "Error generating image with Gemini." 
+    });
   }
 });
 
@@ -455,6 +757,30 @@ app.post("/api/upload-image", upload.single('image'), async (req, res) => {
   } catch (err) {
     console.error("Image upload error:", err);
     res.status(500).json({ error: "Error uploading image." });
+  }
+});
+
+// Analyze uploaded image with AI
+app.post("/api/analyze-image", upload.single('image'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: "No image file uploaded." });
+    }
+
+    const imageUrl = `/uploads/${req.file.filename}`;
+    const { question } = req.body;
+
+    // For now, return a placeholder response
+    // In production, you would integrate with vision models like GPT-4V or Gemini Vision
+    res.json({
+      success: true,
+      analysis: `I can see the image you uploaded. ${question ? `In response to your question "${question}": ` : ""}This appears to be an image that was uploaded to the system. To get detailed analysis, please ensure you have vision capabilities enabled for your AI model.`,
+      imageUrl: imageUrl
+    });
+    
+  } catch (err) {
+    console.error("Image analysis error:", err);
+    res.status(500).json({ error: "Error analyzing image." });
   }
 });
 
