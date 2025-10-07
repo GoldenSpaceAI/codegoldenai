@@ -529,6 +529,58 @@
             color: var(--light);
         }
 
+        /* Password Screen Styles */
+        .password-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--dark);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+        }
+
+        .password-box {
+            background: var(--darker);
+            padding: 40px;
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+        }
+
+        .password-box h2 {
+            margin-bottom: 20px;
+            color: var(--accent);
+        }
+
+        .password-input {
+            width: 100%;
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--light);
+            font-size: 16px;
+            margin-bottom: 15px;
+            outline: none;
+        }
+
+        .password-input:focus {
+            border-color: var(--accent);
+        }
+
+        .password-error {
+            color: var(--warning);
+            margin-bottom: 15px;
+            display: none;
+        }
+
         /* Scrollbar styling */
         ::-webkit-scrollbar {
             width: 6px;
@@ -549,8 +601,18 @@
     </style>
 </head>
 <body>
+    <!-- Password Screen -->
+    <div class="password-screen" id="passwordScreen">
+        <div class="password-box">
+            <h2>Enter Password to Unlock</h2>
+            <input type="password" class="password-input" id="passwordInput" placeholder="Enter password ending with 43096@" />
+            <div class="password-error" id="passwordError">Invalid password. Must end with 43096@</div>
+            <button class="modal-btn primary" id="passwordSubmit" style="width: 100%;">Unlock</button>
+        </div>
+    </div>
+
     <!-- Sidebar -->
-    <div class="sidebar">
+    <div class="sidebar" style="display: none;" id="mainSidebar">
         <div class="sidebar-header">
             <div class="logo">
                 <i class="fas fa-brain"></i>
@@ -569,17 +631,17 @@
     </div>
 
     <!-- Main Content -->
-    <div class="main-content">
+    <div class="main-content" style="display: none;" id="mainContent">
         <div class="header">
             <h1>Advanced AI Assistant</h1>
-           <div class="model-selector">
-    <button class="model-btn active" data-model="gpt-4.1">GPT-4.1</button>
-    <button class="model-btn" data-model="gpt-40-mini">GPT-40 Mini</button>
-    <button class="model-btn" data-model="gemini2.5-pro">Gemini 2.5 Pro</button>
-    <button class="model-btn" data-model="gemini-flash">Gemini Flash</button>
-    <button class="model-btn" data-model="deepseek-chat">DeepSeek Chat</button>
-    <button class="model-btn" data-model="deepseek-coder">DeepSeek Coder</button>
-</div>        
+            <div class="model-selector">
+                <button class="model-btn active" data-model="gpt-4.1">GPT-4.1</button>
+                <button class="model-btn" data-model="gpt-40-mini">GPT-40 Mini</button>
+                <button class="model-btn" data-model="gemini2.5-pro">Gemini 2.5 Pro</button>
+                <button class="model-btn" data-model="gemini-flash">Gemini Flash</button>
+                <button class="model-btn" data-model="deepseek-chat">DeepSeek Chat</button>
+                <button class="model-btn" data-model="deepseek-coder">DeepSeek Coder</button>
+            </div>        
         </div>
 
         <div class="chat-container" id="chatContainer">
@@ -642,590 +704,638 @@
     <input type="file" id="fileInput" class="file-input" accept="image/*">
 
     <script>
-        // DOM Elements
-        const chatContainer = document.getElementById('chatContainer');
-        const messageInput = document.getElementById('messageInput');
-        const sendButton = document.getElementById('sendButton');
-        const micButton = document.getElementById('micButton');
-        const voiceIndicator = document.getElementById('voiceIndicator');
-        const newChatBtn = document.getElementById('newChatBtn');
-        const customInstructionsBtn = document.getElementById('customInstructionsBtn');
-        const customInstructionsModal = document.getElementById('customInstructionsModal');
-        const instructionsInput = document.getElementById('instructionsInput');
-        const saveInstructionsBtn = document.getElementById('saveInstructions');
-        const cancelInstructionsBtn = document.getElementById('cancelInstructions');
-        const modelButtons = document.querySelectorAll('.model-btn');
-        const imageGenBtn = document.getElementById('imageGenBtn');
-        const deepSearchBtn = document.getElementById('deepSearchBtn');
-        const uploadImageBtn = document.getElementById('uploadImageBtn');
-        const fileInput = document.getElementById('fileInput');
-        const chatHistory = document.getElementById('chatHistory');
+        // ========= PASSWORD PROTECTION =========
+        const passwordScreen = document.getElementById('passwordScreen');
+        const passwordInput = document.getElementById('passwordInput');
+        const passwordSubmit = document.getElementById('passwordSubmit');
+        const passwordError = document.getElementById('passwordError');
+        const mainSidebar = document.getElementById('mainSidebar');
+        const mainContent = document.getElementById('mainContent');
 
-        // Chat state
-        let currentChatId = null;
-        let currentModel = 'gpt-4.1';
-        let isDeepSearchMode = false;
-        let chats = JSON.parse(localStorage.getItem('aiChats')) || {};
-        let customInstructions = localStorage.getItem('customInstructions') || '';
-        let recognition = null;
-        
-        // Model endpoints mapping
-       const modelEndpoints = {
-    'gpt-4.1': '/api/generate-gpt4.1',
-    'gpt-40-mini': '/api/generate-gpt40-mini', 
-    'gemini2.5-pro': '/api/generate-gemini2.5-pro',
-    'gemini-flash': '/api/generate-gemini-flash',
-    'deepseek-chat': '/api/generate-deepseek-chat',
-    'deepseek-coder': '/api/generate-deepseek-coder'
-};
-        // Initialize the app
-        function init() {
-            loadCustomInstructions();
-            loadChatHistory();
-            if (Object.keys(chats).length === 0) {
-                createNewChat();
+        function checkPassword() {
+            const password = passwordInput.value.trim();
+            if (password.endsWith('43096@')) {
+                passwordScreen.style.display = 'none';
+                mainSidebar.style.display = 'flex';
+                mainContent.style.display = 'flex';
+                localStorage.setItem('advanced_ai_unlocked', 'true');
+                initApp();
             } else {
-                loadChat(currentChatId || Object.keys(chats)[0]);
-            }
-            initSpeechRecognition();
-            setupEventListeners();
-        }
-
-        // Initialize speech recognition
-        function initSpeechRecognition() {
-            if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-                recognition = new SpeechRecognition();
-                recognition.continuous = false;
-                recognition.interimResults = false;
-                recognition.lang = 'en-US';
-
-                recognition.onresult = (event) => {
-                    const transcript = event.results[0][0].transcript;
-                    messageInput.value = transcript;
-                    stopRecording();
-                };
-
-                recognition.onerror = (event) => {
-                    console.error('Speech recognition error:', event.error);
-                    stopRecording();
-                    alert('Speech recognition failed. Please try again.');
-                };
-
-                recognition.onend = () => {
-                    stopRecording();
-                };
-            } else {
-                micButton.style.display = 'none';
+                passwordError.style.display = 'block';
             }
         }
 
-        // Setup event listeners
-        function setupEventListeners() {
-            // Mic button
-            micButton.addEventListener('click', toggleRecording);
+        // Check if already unlocked
+        if (localStorage.getItem('advanced_ai_unlocked') === 'true') {
+            passwordScreen.style.display = 'none';
+            mainSidebar.style.display = 'flex';
+            mainContent.style.display = 'flex';
+            // Initialize app after DOM is loaded
+            setTimeout(initApp, 100);
+        }
+
+        passwordSubmit.addEventListener('click', checkPassword);
+        passwordInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') checkPassword();
+        });
+
+        // ========= MAIN APP CODE =========
+        function initApp() {
+            // DOM Elements
+            const chatContainer = document.getElementById('chatContainer');
+            const messageInput = document.getElementById('messageInput');
+            const sendButton = document.getElementById('sendButton');
+            const micButton = document.getElementById('micButton');
+            const voiceIndicator = document.getElementById('voiceIndicator');
+            const newChatBtn = document.getElementById('newChatBtn');
+            const customInstructionsBtn = document.getElementById('customInstructionsBtn');
+            const customInstructionsModal = document.getElementById('customInstructionsModal');
+            const instructionsInput = document.getElementById('instructionsInput');
+            const saveInstructionsBtn = document.getElementById('saveInstructions');
+            const cancelInstructionsBtn = document.getElementById('cancelInstructions');
+            const modelButtons = document.querySelectorAll('.model-btn');
+            const imageGenBtn = document.getElementById('imageGenBtn');
+            const deepSearchBtn = document.getElementById('deepSearchBtn');
+            const uploadImageBtn = document.getElementById('uploadImageBtn');
+            const fileInput = document.getElementById('fileInput');
+            const chatHistory = document.getElementById('chatHistory');
+
+            // Chat state
+            let currentChatId = null;
+            let currentModel = 'gpt-4.1';
+            let isDeepSearchMode = false;
+            let chats = JSON.parse(localStorage.getItem('aiChats')) || {};
+            let customInstructions = localStorage.getItem('customInstructions') || '';
+            let recognition = null;
+            let currentImageUrl = null;
             
-            // Send button and Enter key
-            sendButton.addEventListener('click', sendMessage);
-            messageInput.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    sendMessage();
+            // Model endpoints mapping - FIXED GEMINI ROUTES
+            const modelEndpoints = {
+                'gpt-4.1': '/api/generate-gpt4.1',
+                'gpt-40-mini': '/api/generate-gpt40-mini', 
+                'gemini2.5-pro': '/api/generate-gemini2.5-pro',
+                'gemini-flash': '/api/generate-gemini-flash',
+                'deepseek-chat': '/api/generate-deepseek-chat',
+                'deepseek-coder': '/api/generate-deepseek-coder'
+            };
+
+            // Initialize the app
+            function init() {
+                loadCustomInstructions();
+                loadChatHistory();
+                if (Object.keys(chats).length === 0) {
+                    createNewChat();
+                } else {
+                    loadChat(currentChatId || Object.keys(chats)[0]);
                 }
-            });
-            
-            // Auto-resize textarea
-            messageInput.addEventListener('input', function() {
-                this.style.height = 'auto';
-                this.style.height = (this.scrollHeight) + 'px';
-            });
-            
-            // Model selection
-            modelButtons.forEach(button => {
-                button.addEventListener('click', () => {
-                    modelButtons.forEach(btn => btn.classList.remove('active'));
-                    button.classList.add('active');
-                    currentModel = button.dataset.model;
-                    if (currentChatId) {
-                        chats[currentChatId].model = currentModel;
-                        saveChats();
+                initSpeechRecognition();
+                setupEventListeners();
+            }
+
+            // Initialize speech recognition
+            function initSpeechRecognition() {
+                if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+                    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                    recognition = new SpeechRecognition();
+                    recognition.continuous = false;
+                    recognition.interimResults = false;
+                    recognition.lang = 'en-US';
+
+                    recognition.onresult = (event) => {
+                        const transcript = event.results[0][0].transcript;
+                        messageInput.value = transcript;
+                        stopRecording();
+                    };
+
+                    recognition.onerror = (event) => {
+                        console.error('Speech recognition error:', event.error);
+                        stopRecording();
+                        alert('Speech recognition failed. Please try again.');
+                    };
+
+                    recognition.onend = () => {
+                        stopRecording();
+                    };
+                } else {
+                    micButton.style.display = 'none';
+                }
+            }
+
+            // Setup event listeners
+            function setupEventListeners() {
+                // Mic button
+                micButton.addEventListener('click', toggleRecording);
+                
+                // Send button and Enter key
+                sendButton.addEventListener('click', sendMessage);
+                messageInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        sendMessage();
                     }
                 });
-            });
-            
-            // Feature buttons
-            deepSearchBtn.addEventListener('click', () => {
-                const message = messageInput.value.trim();
-                if (message === '') {
-                    alert('Please type your question first, then click Deep Search.');
-                    return;
-                }
-                isDeepSearchMode = true;
-                deepSearchBtn.classList.add('active');
-                sendMessage();
-            });
-            
-            imageGenBtn.addEventListener('click', () => {
-                const prompt = prompt('Describe the image you want to generate:');
-                if (prompt) {
-                    addMessageToChat(`Generate an image: ${prompt}`, 'user');
-                    showTypingIndicator();
-                    setTimeout(() => {
-                        removeTypingIndicator();
-                        // For demo - in production, this would call your image generation API
-                        const demoImages = [
-                            'https://images.unsplash.com/photo-1682687220742-aba13b6e50ba?ixlib=rb-4.0.3&ixid=M3wxMjA3fDF8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
-                            'https://images.unsplash.com/photo-1695758478666-0672b74a9fc6?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
-                            'https://images.unsplash.com/photo-1695653422714-d6f8cff4f3bd?ixlib=rb-4.0.3&ixid=M3wxMjA3fDF8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80'
-                        ];
-                        const randomImage = demoImages[Math.floor(Math.random() * demoImages.length)];
-                        addMessageToChat(`IMAGE:${randomImage}`, 'ai');
-                    }, 2000);
-                }
-            });
-            
-            uploadImageBtn.addEventListener('click', () => fileInput.click());
-            fileInput.addEventListener('change', handleImageUpload);
-            
-            // Chat management
-            newChatBtn.addEventListener('click', () => {
-                if (chatContainer.children.length > 1) {
-                    if (confirm('Start a new chat? Your current chat will be saved.')) {
+                
+                // Auto-resize textarea
+                messageInput.addEventListener('input', function() {
+                    this.style.height = 'auto';
+                    this.style.height = (this.scrollHeight) + 'px';
+                });
+                
+                // Model selection
+                modelButtons.forEach(button => {
+                    button.addEventListener('click', () => {
+                        modelButtons.forEach(btn => btn.classList.remove('active'));
+                        button.classList.add('active');
+                        currentModel = button.dataset.model;
+                        if (currentChatId) {
+                            chats[currentChatId].model = currentModel;
+                            saveChats();
+                        }
+                    });
+                });
+                
+                // Feature buttons
+                deepSearchBtn.addEventListener('click', () => {
+                    const message = messageInput.value.trim();
+                    if (message === '') {
+                        alert('Please type your question first, then click Deep Search.');
+                        return;
+                    }
+                    isDeepSearchMode = true;
+                    deepSearchBtn.classList.add('active');
+                    sendMessage();
+                });
+                
+                imageGenBtn.addEventListener('click', () => {
+                    const prompt = prompt('Describe the image you want to generate:');
+                    if (prompt) {
+                        addMessageToChat(`Generate an image: ${prompt}`, 'user');
+                        showTypingIndicator();
+                        setTimeout(() => {
+                            removeTypingIndicator();
+                            // For demo - in production, this would call your image generation API
+                            const demoImages = [
+                                'https://images.unsplash.com/photo-1682687220742-aba13b6e50ba?ixlib=rb-4.0.3&ixid=M3wxMjA3fDF8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
+                                'https://images.unsplash.com/photo-1695758478666-0672b74a9fc6?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
+                                'https://images.unsplash.com/photo-1695653422714-d6f8cff4f3bd?ixlib=rb-4.0.3&ixid=M3wxMjA3fDF8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80'
+                            ];
+                            const randomImage = demoImages[Math.floor(Math.random() * demoImages.length)];
+                            addMessageToChat(`IMAGE:${randomImage}`, 'ai');
+                        }, 2000);
+                    }
+                });
+                
+                uploadImageBtn.addEventListener('click', () => fileInput.click());
+                fileInput.addEventListener('change', handleImageUpload);
+                
+                // Chat management
+                newChatBtn.addEventListener('click', () => {
+                    if (chatContainer.children.length > 1) {
+                        if (confirm('Start a new chat? Your current chat will be saved.')) {
+                            createNewChat();
+                        }
+                    } else {
                         createNewChat();
                     }
-                } else {
-                    createNewChat();
-                }
-            });
-            
-            // Custom instructions modal
-            customInstructionsBtn.addEventListener('click', () => {
-                instructionsInput.value = customInstructions;
-                customInstructionsModal.style.display = 'flex';
-            });
-            
-            saveInstructionsBtn.addEventListener('click', () => {
-                customInstructions = instructionsInput.value.trim();
-                localStorage.setItem('customInstructions', customInstructions);
-                customInstructionsModal.style.display = 'none';
-                alert('Custom instructions saved! The AI will now respond according to your preferences.');
-            });
-            
-            cancelInstructionsBtn.addEventListener('click', () => {
-                customInstructionsModal.style.display = 'none';
-            });
-        }
-
-        // Load custom instructions
-        function loadCustomInstructions() {
-            instructionsInput.value = customInstructions;
-        }
-
-        // Create a new chat
-        function createNewChat() {
-            const chatId = 'chat_' + Date.now();
-            currentChatId = chatId;
-            
-            chats[chatId] = {
-                id: chatId,
-                title: 'New Chat',
-                messages: [
-                    {
-                        role: 'ai',
-                        content: "Hello! I'm your Advanced AI Assistant. How can I help you today?",
-                        timestamp: new Date().toISOString()
-                    }
-                ],
-                model: currentModel,
-                createdAt: new Date().toISOString()
-            };
-            
-            saveChats();
-            loadChatHistory();
-            loadChat(chatId);
-        }
-
-        // Save chats to localStorage
-        function saveChats() {
-            localStorage.setItem('aiChats', JSON.stringify(chats));
-        }
-
-        // Load chat history sidebar
-        function loadChatHistory() {
-            chatHistory.innerHTML = '';
-            
-            Object.values(chats).forEach(chat => {
-                const chatItem = document.createElement('div');
-                chatItem.className = `chat-item ${chat.id === currentChatId ? 'active' : ''}`;
-                chatItem.innerHTML = `
-                    <i class="fas fa-comment"></i>
-                    <span>${chat.title}</span>
-                `;
-                
-                chatItem.addEventListener('click', () => {
-                    loadChat(chat.id);
                 });
                 
-                chatHistory.appendChild(chatItem);
-            });
-        }
-
-        // Load a specific chat
-        function loadChat(chatId) {
-            currentChatId = chatId;
-            const chat = chats[chatId];
-            
-            if (!chat) return;
-            
-            currentModel = chat.model;
-            updateModelButtons();
-            
-            chatContainer.innerHTML = '';
-            chat.messages.forEach(message => {
-                renderMessage(message);
-            });
-            
-            document.querySelectorAll('.chat-item').forEach(item => {
-                item.classList.remove('active');
-            });
-            const chatItems = document.querySelectorAll('.chat-item');
-            const chatIndex = Object.keys(chats).indexOf(chatId);
-            if (chatIndex >= 0 && chatItems[chatIndex]) {
-                chatItems[chatIndex].classList.add('active');
+                // Custom instructions modal
+                customInstructionsBtn.addEventListener('click', () => {
+                    instructionsInput.value = customInstructions;
+                    customInstructionsModal.style.display = 'flex';
+                });
+                
+                saveInstructionsBtn.addEventListener('click', () => {
+                    customInstructions = instructionsInput.value.trim();
+                    localStorage.setItem('customInstructions', customInstructions);
+                    customInstructionsModal.style.display = 'none';
+                    alert('Custom instructions saved! The AI will now respond according to your preferences.');
+                });
+                
+                cancelInstructionsBtn.addEventListener('click', () => {
+                    customInstructionsModal.style.display = 'none';
+                });
             }
-            
-            chatContainer.scrollTop = chatContainer.scrollHeight;
-        }
 
-        // Update model buttons
-        function updateModelButtons() {
-            modelButtons.forEach(button => {
-                button.classList.remove('active');
-                if (button.dataset.model === currentModel) {
-                    button.classList.add('active');
+            // Load custom instructions
+            function loadCustomInstructions() {
+                instructionsInput.value = customInstructions;
+            }
+
+            // Create a new chat
+            function createNewChat() {
+                const chatId = 'chat_' + Date.now();
+                currentChatId = chatId;
+                
+                chats[chatId] = {
+                    id: chatId,
+                    title: 'New Chat',
+                    messages: [
+                        {
+                            role: 'ai',
+                            content: "Hello! I'm your Advanced AI Assistant. How can I help you today?",
+                            timestamp: new Date().toISOString()
+                        }
+                    ],
+                    model: currentModel,
+                    createdAt: new Date().toISOString()
+                };
+                
+                saveChats();
+                loadChatHistory();
+                loadChat(chatId);
+            }
+
+            // Save chats to localStorage
+            function saveChats() {
+                localStorage.setItem('aiChats', JSON.stringify(chats));
+            }
+
+            // Load chat history sidebar
+            function loadChatHistory() {
+                chatHistory.innerHTML = '';
+                
+                Object.values(chats).forEach(chat => {
+                    const chatItem = document.createElement('div');
+                    chatItem.className = `chat-item ${chat.id === currentChatId ? 'active' : ''}`;
+                    chatItem.innerHTML = `
+                        <i class="fas fa-comment"></i>
+                        <span>${chat.title}</span>
+                    `;
+                    
+                    chatItem.addEventListener('click', () => {
+                        loadChat(chat.id);
+                    });
+                    
+                    chatHistory.appendChild(chatItem);
+                });
+            }
+
+            // Load a specific chat
+            function loadChat(chatId) {
+                currentChatId = chatId;
+                const chat = chats[chatId];
+                
+                if (!chat) return;
+                
+                currentModel = chat.model;
+                updateModelButtons();
+                
+                chatContainer.innerHTML = '';
+                chat.messages.forEach(message => {
+                    renderMessage(message);
+                });
+                
+                document.querySelectorAll('.chat-item').forEach(item => {
+                    item.classList.remove('active');
+                });
+                const chatItems = document.querySelectorAll('.chat-item');
+                const chatIndex = Object.keys(chats).indexOf(chatId);
+                if (chatIndex >= 0 && chatItems[chatIndex]) {
+                    chatItems[chatIndex].classList.add('active');
                 }
-            });
-        }
-
-        // Render a message in the chat
-        function renderMessage(message) {
-            const messageDiv = document.createElement('div');
-            
-            if (message.isDeepSearch) {
-                messageDiv.className = 'message deep-search-message';
-            } else {
-                messageDiv.className = `message ${message.role}-message`;
+                
+                chatContainer.scrollTop = chatContainer.scrollHeight;
             }
-            
-            const messageHeader = document.createElement('div');
-            messageHeader.className = 'message-header';
-            
-            if (message.role === 'ai') {
+
+            // Update model buttons
+            function updateModelButtons() {
+                modelButtons.forEach(button => {
+                    button.classList.remove('active');
+                    if (button.dataset.model === currentModel) {
+                        button.classList.add('active');
+                    }
+                });
+            }
+
+            // Render a message in the chat
+            function renderMessage(message) {
+                const messageDiv = document.createElement('div');
+                
                 if (message.isDeepSearch) {
-                    messageHeader.innerHTML = `<i class="fas fa-search"></i><span>Deep Research</span><span class="deep-search-badge">Comprehensive Analysis</span>`;
-                    messageHeader.classList.add('deep-search-header');
+                    messageDiv.className = 'message deep-search-message';
                 } else {
-                    messageHeader.innerHTML = `<i class="fas fa-robot"></i><span>Advanced AI</span>`;
+                    messageDiv.className = `message ${message.role}-message`;
                 }
-            } else {
-                messageHeader.innerHTML = `<i class="fas fa-user"></i><span>You</span>`;
-            }
-            
-            messageDiv.appendChild(messageHeader);
-            
-            // Handle different message types
-            if (message.type === 'image' && message.imageUrl) {
-                const imageContainer = document.createElement('div');
-                imageContainer.className = 'uploaded-image';
                 
-                const img = document.createElement('img');
-                img.src = message.imageUrl;
-                img.alt = 'Uploaded image';
+                const messageHeader = document.createElement('div');
+                messageHeader.className = 'message-header';
                 
-                imageContainer.appendChild(img);
-                messageDiv.appendChild(imageContainer);
+                if (message.role === 'ai') {
+                    if (message.isDeepSearch) {
+                        messageHeader.innerHTML = `<i class="fas fa-search"></i><span>Deep Research</span><span class="deep-search-badge">Comprehensive Analysis</span>`;
+                        messageHeader.classList.add('deep-search-header');
+                    } else {
+                        messageHeader.innerHTML = `<i class="fas fa-robot"></i><span>Advanced AI</span>`;
+                    }
+                } else {
+                    messageHeader.innerHTML = `<i class="fas fa-user"></i><span>You</span>`;
+                }
                 
-                if (message.content) {
+                messageDiv.appendChild(messageHeader);
+                
+                // Handle different message types
+                if (message.type === 'image' && message.imageUrl) {
+                    const imageContainer = document.createElement('div');
+                    imageContainer.className = 'uploaded-image';
+                    
+                    const img = document.createElement('img');
+                    img.src = message.imageUrl;
+                    img.alt = 'Uploaded image';
+                    
+                    imageContainer.appendChild(img);
+                    messageDiv.appendChild(imageContainer);
+                    
+                    if (message.content) {
+                        const textNode = document.createTextNode(message.content);
+                        messageDiv.appendChild(textNode);
+                    }
+                } else if (message.content.includes('```')) {
+                    const parts = message.content.split('```');
+                    parts.forEach((part, index) => {
+                        if (index % 2 === 0) {
+                            const textNode = document.createTextNode(part);
+                            messageDiv.appendChild(textNode);
+                        } else {
+                            const codeBlock = document.createElement('div');
+                            codeBlock.className = 'code-block';
+                            
+                            const codeHeader = document.createElement('div');
+                            codeHeader.className = 'code-header';
+                            codeHeader.innerHTML = `Code <button class="copy-btn"><i class="fas fa-copy"></i> Copy</button>`;
+                            
+                            const codeContent = document.createElement('pre');
+                            codeContent.textContent = part;
+                            
+                            codeBlock.appendChild(codeHeader);
+                            codeBlock.appendChild(codeContent);
+                            messageDiv.appendChild(codeBlock);
+                            
+                            const copyBtn = codeHeader.querySelector('.copy-btn');
+                            copyBtn.addEventListener('click', () => {
+                                navigator.clipboard.writeText(part);
+                                copyBtn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+                                setTimeout(() => {
+                                    copyBtn.innerHTML = '<i class="fas fa-copy"></i> Copy';
+                                }, 2000);
+                            });
+                        }
+                    });
+                } else if (message.content.startsWith('IMAGE:')) {
+                    const imageUrl = message.content.substring(6);
+                    const imageContainer = document.createElement('div');
+                    imageContainer.className = 'image-container';
+                    
+                    const img = document.createElement('img');
+                    img.src = imageUrl;
+                    img.alt = 'Generated image';
+                    
+                    imageContainer.appendChild(img);
+                    messageDiv.appendChild(imageContainer);
+                } else {
                     const textNode = document.createTextNode(message.content);
                     messageDiv.appendChild(textNode);
                 }
-            } else if (message.content.includes('```')) {
-                const parts = message.content.split('```');
-                parts.forEach((part, index) => {
-                    if (index % 2 === 0) {
-                        const textNode = document.createTextNode(part);
-                        messageDiv.appendChild(textNode);
-                    } else {
-                        const codeBlock = document.createElement('div');
-                        codeBlock.className = 'code-block';
-                        
-                        const codeHeader = document.createElement('div');
-                        codeHeader.className = 'code-header';
-                        codeHeader.innerHTML = `Code <button class="copy-btn"><i class="fas fa-copy"></i> Copy</button>`;
-                        
-                        const codeContent = document.createElement('pre');
-                        codeContent.textContent = part;
-                        
-                        codeBlock.appendChild(codeHeader);
-                        codeBlock.appendChild(codeContent);
-                        messageDiv.appendChild(codeBlock);
-                        
-                        const copyBtn = codeHeader.querySelector('.copy-btn');
-                        copyBtn.addEventListener('click', () => {
-                            navigator.clipboard.writeText(part);
-                            copyBtn.innerHTML = '<i class="fas fa-check"></i> Copied!';
-                            setTimeout(() => {
-                                copyBtn.innerHTML = '<i class="fas fa-copy"></i> Copy';
-                            }, 2000);
+
+                // Add action buttons for AI messages
+                if (message.role === 'ai') {
+                    const actionsDiv = document.createElement('div');
+                    actionsDiv.className = 'message-actions';
+                    
+                    const speakBtn = document.createElement('button');
+                    speakBtn.className = 'action-btn';
+                    speakBtn.innerHTML = '<i class="fas fa-volume-up"></i> Speak';
+                    speakBtn.addEventListener('click', () => {
+                        speakText(message.content);
+                    });
+                    
+                    actionsDiv.appendChild(speakBtn);
+                    messageDiv.appendChild(actionsDiv);
+                }
+                
+                chatContainer.appendChild(messageDiv);
+            }
+
+            // Text-to-speech function
+            function speakText(text) {
+                if ('speechSynthesis' in window) {
+                    // Remove code blocks and image markers for speech
+                    const cleanText = text.replace(/```[\s\S]*?```/g, 'code section').replace(/IMAGE:.*$/, '');
+                    
+                    const utterance = new SpeechSynthesisUtterance(cleanText);
+                    utterance.rate = 1.0;
+                    utterance.pitch = 1.0;
+                    utterance.volume = 0.8;
+                    
+                    window.speechSynthesis.speak(utterance);
+                } else {
+                    alert('Text-to-speech is not supported in your browser.');
+                }
+            }
+
+            // Send message function with smart memory management
+            async function sendMessage() {
+                const message = messageInput.value.trim();
+                if (message === '') return;
+
+                addMessageToChat(message, 'user', 'text', null, isDeepSearchMode);
+                messageInput.value = '';
+                messageInput.style.height = 'auto';
+
+                showTypingIndicator();
+
+                try {
+                    const currentChat = chats[currentChatId];
+                    
+                    // Smart context: only send last 6 messages + custom instructions for context
+                    const recentMessages = currentChat.messages.slice(-6);
+                    
+                    // Prepare messages for API
+                    let apiMessages = recentMessages.map(msg => ({
+                        role: msg.role === 'ai' ? 'assistant' : 'user',
+                        content: msg.content
+                    }));
+
+                    // Add custom instructions if available
+                    if (customInstructions) {
+                        apiMessages.unshift({
+                            role: 'system',
+                            content: `Custom instructions for this user: ${customInstructions}`
                         });
                     }
-                });
-            } else if (message.content.startsWith('IMAGE:')) {
-                const imageUrl = message.content.substring(6);
-                const imageContainer = document.createElement('div');
-                imageContainer.className = 'image-container';
-                
-                const img = document.createElement('img');
-                img.src = imageUrl;
-                img.alt = 'Generated image';
-                
-                imageContainer.appendChild(img);
-                messageDiv.appendChild(imageContainer);
-            } else {
-                const textNode = document.createTextNode(message.content);
-                messageDiv.appendChild(textNode);
-            }
 
-            // Add action buttons for AI messages
-            if (message.role === 'ai') {
-                const actionsDiv = document.createElement('div');
-                actionsDiv.className = 'message-actions';
-                
-                const speakBtn = document.createElement('button');
-                speakBtn.className = 'action-btn';
-                speakBtn.innerHTML = '<i class="fas fa-volume-up"></i> Speak';
-                speakBtn.addEventListener('click', () => {
-                    speakText(message.content);
-                });
-                
-                actionsDiv.appendChild(speakBtn);
-                messageDiv.appendChild(actionsDiv);
-            }
-            
-            chatContainer.appendChild(messageDiv);
-        }
-
-        // Text-to-speech function
-        function speakText(text) {
-            if ('speechSynthesis' in window) {
-                // Remove code blocks and image markers for speech
-                const cleanText = text.replace(/```[\s\S]*?```/g, 'code section').replace(/IMAGE:.*$/, '');
-                
-                const utterance = new SpeechSynthesisUtterance(cleanText);
-                utterance.rate = 1.0;
-                utterance.pitch = 1.0;
-                utterance.volume = 0.8;
-                
-                window.speechSynthesis.speak(utterance);
-            } else {
-                alert('Text-to-speech is not supported in your browser.');
-            }
-        }
-
-        // Send message function with smart memory management
-        async function sendMessage() {
-            const message = messageInput.value.trim();
-            if (message === '') return;
-
-            addMessageToChat(message, 'user', 'text', null, isDeepSearchMode);
-            messageInput.value = '';
-            messageInput.style.height = 'auto';
-
-            showTypingIndicator();
-
-            try {
-                const currentChat = chats[currentChatId];
-                
-                // Smart context: only send last 6 messages + custom instructions for context
-                const recentMessages = currentChat.messages.slice(-6);
-                
-                // Prepare messages for API
-                let apiMessages = recentMessages.map(msg => ({
-                    role: msg.role === 'ai' ? 'assistant' : 'user',
-                    content: msg.content
-                }));
-
-                // Add custom instructions if available
-                if (customInstructions) {
-                    apiMessages.unshift({
-                        role: 'system',
-                        content: `Custom instructions for this user: ${customInstructions}`
-                    });
-                }
-
-                const endpoint = modelEndpoints[currentModel];
-                
-                let enhancedPrompt = message;
-                if (isDeepSearchMode) {
-                    enhancedPrompt = `Please conduct a comprehensive deep search analysis on: "${message}". Provide a detailed, professional response.`;
-                }
-
-                const response = await fetch(endpoint, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        messages: apiMessages,
-                        prompt: enhancedPrompt
-                    })
-                });
-
-                if (!response.ok) {
-                    throw new Error(`API error: ${response.status}`);
-                }
-
-                const data = await response.json();
-                
-                removeTypingIndicator();
-                addMessageToChat(data.text, 'ai', 'text', null, isDeepSearchMode);
-                
-                if (isDeepSearchMode) {
-                    isDeepSearchMode = false;
-                    deepSearchBtn.classList.remove('active');
-                }
-                
-            } catch (error) {
-                console.error('Error sending message:', error);
-                removeTypingIndicator();
-                addMessageToChat("Sorry, I encountered an error. Please try again.", 'ai');
-            }
-        }
-
-        // Add message to current chat
-        function addMessageToChat(content, role, type = 'text', imageUrl = null, isDeepSearch = false) {
-            if (!currentChatId) return;
-            
-            const message = {
-                role,
-                content,
-                type,
-                imageUrl,
-                isDeepSearch,
-                timestamp: new Date().toISOString()
-            };
-            
-            chats[currentChatId].messages.push(message);
-            
-            if (role === 'user' && chats[currentChatId].messages.filter(m => m.role === 'user').length === 1) {
-                const title = content.length > 30 ? content.substring(0, 30) + '...' : content;
-                chats[currentChatId].title = title;
-            }
-            
-            saveChats();
-            loadChatHistory();
-            renderMessage(message);
-            
-            chatContainer.scrollTop = chatContainer.scrollHeight;
-        }
-
-        // Show typing indicator
-        function showTypingIndicator() {
-            const typingDiv = document.createElement('div');
-            typingDiv.className = 'typing-indicator';
-            typingDiv.id = 'typingIndicator';
-            
-            for (let i = 0; i < 3; i++) {
-                const dot = document.createElement('div');
-                dot.className = 'typing-dot';
-                typingDiv.appendChild(dot);
-            }
-            
-            chatContainer.appendChild(typingDiv);
-            chatContainer.scrollTop = chatContainer.scrollHeight;
-        }
-
-        // Remove typing indicator
-        function removeTypingIndicator() {
-            const typingIndicator = document.getElementById('typingIndicator');
-            if (typingIndicator) {
-                typingIndicator.remove();
-            }
-        }
-
-        // Handle image upload
-        async function handleImageUpload(e) {
-            const file = e.target.files[0];
-            if (file) {
-                try {
-                    const formData = new FormData();
-                    formData.append('image', file);
+                    const endpoint = modelEndpoints[currentModel];
                     
-                    const response = await fetch('/api/upload-image', {
-                        method: 'POST',
-                        body: formData
-                    });
-                    
-                    if (!response.ok) {
-                        throw new Error('Upload failed');
+                    let enhancedPrompt = message;
+                    if (isDeepSearchMode) {
+                        enhancedPrompt = `Please conduct a comprehensive deep search analysis on: "${message}". Provide a detailed, professional response.`;
                     }
-                    
+
+                    const response = await fetch(endpoint, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            messages: apiMessages,
+                            prompt: enhancedPrompt
+                        })
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`API error: ${response.status}`);
+                    }
+
                     const data = await response.json();
                     
-                    // Add the image to the chat
-                    addMessageToChat('I uploaded this image for analysis', 'user', 'image', data.imageUrl);
+                    removeTypingIndicator();
+                    addMessageToChat(data.text, 'ai', 'text', null, isDeepSearchMode);
                     
-                    // Show typing indicator and AI response
-                    showTypingIndicator();
-                    
-                    setTimeout(() => {
-                        removeTypingIndicator();
-                        addMessageToChat("I can see the image you uploaded! I can analyze it and provide information or answer questions about it. What would you like to know about this image?", 'ai');
-                    }, 1500);
+                    if (isDeepSearchMode) {
+                        isDeepSearchMode = false;
+                        deepSearchBtn.classList.remove('active');
+                    }
                     
                 } catch (error) {
-                    console.error('Upload error:', error);
-                    alert('Failed to upload image. Please try again.');
-                } finally {
-                    fileInput.value = '';
+                    console.error('Error sending message:', error);
+                    removeTypingIndicator();
+                    addMessageToChat("Sorry, I encountered an error. Please try again.", 'ai');
                 }
             }
-        }
 
-        // Voice recording functions
-        function toggleRecording() {
-            if (!recognition) return;
-            
-            if (recognition.recording) {
-                stopRecording();
-            } else {
-                startRecording();
+            // Add message to current chat
+            function addMessageToChat(content, role, type = 'text', imageUrl = null, isDeepSearch = false) {
+                if (!currentChatId) return;
+                
+                const message = {
+                    role,
+                    content,
+                    type,
+                    imageUrl,
+                    isDeepSearch,
+                    timestamp: new Date().toISOString()
+                };
+                
+                chats[currentChatId].messages.push(message);
+                
+                if (role === 'user' && chats[currentChatId].messages.filter(m => m.role === 'user').length === 1) {
+                    const title = content.length > 30 ? content.substring(0, 30) + '...' : content;
+                    chats[currentChatId].title = title;
+                }
+                
+                saveChats();
+                loadChatHistory();
+                renderMessage(message);
+                
+                chatContainer.scrollTop = chatContainer.scrollHeight;
             }
-        }
 
-        function startRecording() {
-            try {
-                recognition.start();
-                voiceIndicator.style.display = 'block';
-                micButton.innerHTML = '<i class="fas fa-square"></i>';
-                micButton.style.color = 'var(--warning)';
-                recognition.recording = true;
-            } catch (err) {
-                console.error('Error starting recording:', err);
+            // Show typing indicator
+            function showTypingIndicator() {
+                const typingDiv = document.createElement('div');
+                typingDiv.className = 'typing-indicator';
+                typingDiv.id = 'typingIndicator';
+                
+                for (let i = 0; i < 3; i++) {
+                    const dot = document.createElement('div');
+                    dot.className = 'typing-dot';
+                    typingDiv.appendChild(dot);
+                }
+                
+                chatContainer.appendChild(typingDiv);
+                chatContainer.scrollTop = chatContainer.scrollHeight;
             }
-        }
 
-        function stopRecording() {
-            voiceIndicator.style.display = 'none';
-            micButton.innerHTML = '<i class="fas fa-microphone"></i>';
-            micButton.style.color = '';
-            if (recognition) {
-                recognition.recording = false;
+            // Remove typing indicator
+            function removeTypingIndicator() {
+                const typingIndicator = document.getElementById('typingIndicator');
+                if (typingIndicator) {
+                    typingIndicator.remove();
+                }
             }
-        }
 
-        // Initialize the app
-        init();
+            // Handle image upload - FIXED VERSION
+            async function handleImageUpload(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    try {
+                        const formData = new FormData();
+                        formData.append('image', file);
+                        
+                        const response = await fetch('/api/upload-image', {
+                            method: 'POST',
+                            body: formData
+                        });
+                        
+                        if (!response.ok) {
+                            throw new Error('Upload failed');
+                        }
+                        
+                        const data = await response.json();
+                        
+                        if (data.success) {
+                            // Store the image URL for the AI to see
+                            currentImageUrl = data.imageUrl;
+                            
+                            // Add the image to the chat
+                            const messageContent = `[Uploaded image: ${file.name}]`;
+                            addMessageToChat(messageContent, 'user', 'image', data.imageUrl);
+                            
+                            // Show typing indicator and AI response
+                            showTypingIndicator();
+                            
+                            setTimeout(() => {
+                                removeTypingIndicator();
+                                addMessageToChat("I can see the image you uploaded! I can analyze it and provide information or answer questions about it. What would you like to know about this image?", 'ai');
+                            }, 1500);
+                        } else {
+                            throw new Error(data.error || 'Upload failed');
+                        }
+                        
+                    } catch (error) {
+                        console.error('Upload error:', error);
+                        alert('Failed to upload image. Please try again.');
+                    } finally {
+                        fileInput.value = '';
+                    }
+                }
+            }
+
+            // Voice recording functions
+            function toggleRecording() {
+                if (!recognition) return;
+                
+                if (recognition.recording) {
+                    stopRecording();
+                } else {
+                    startRecording();
+                }
+            }
+
+            function startRecording() {
+                try {
+                    recognition.start();
+                    voiceIndicator.style.display = 'block';
+                    micButton.innerHTML = '<i class="fas fa-square"></i>';
+                    micButton.style.color = 'var(--warning)';
+                    recognition.recording = true;
+                } catch (err) {
+                    console.error('Error starting recording:', err);
+                }
+            }
+
+            function stopRecording() {
+                voiceIndicator.style.display = 'none';
+                micButton.innerHTML = '<i class="fas fa-microphone"></i>';
+                micButton.style.color = '';
+                if (recognition) {
+                    recognition.recording = false;
+                }
+            }
+
+            // Initialize the app
+            init();
+        }
     </script>
 </body>
 </html>
