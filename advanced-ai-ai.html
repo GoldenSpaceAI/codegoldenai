@@ -147,6 +147,7 @@
         .model-selector {
             display: flex;
             gap: 10px;
+            flex-wrap: wrap;
         }
 
         .model-btn {
@@ -158,6 +159,7 @@
             cursor: pointer;
             font-size: 14px;
             transition: all 0.2s;
+            white-space: nowrap;
         }
 
         .model-btn.active {
@@ -635,7 +637,13 @@
         <div class="header">
             <h1>Advanced AI Assistant</h1>
             <div class="model-selector">
-                <button class="model-btn active" data-model="gpt-4.1">GPT-4.1</button>
+                <!-- GPT-5 Family -->
+                <button class="model-btn active" data-model="gpt-5">GPT-5</button>
+                <button class="model-btn" data-model="gpt-5-mini">GPT-5 Mini</button>
+                <button class="model-btn" data-model="gpt-5-nano">GPT-5 Nano</button>
+                
+                <!-- Existing Models -->
+                <button class="model-btn" data-model="gpt-4.1">GPT-4.1</button>
                 <button class="model-btn" data-model="gpt-40-mini">GPT-40 Mini</button>
                 <button class="model-btn" data-model="gemini2.5-pro">Gemini 2.5 Pro</button>
                 <button class="model-btn" data-model="gemini-flash">Gemini Flash</button>
@@ -762,15 +770,21 @@
 
             // Chat state
             let currentChatId = null;
-            let currentModel = 'gpt-4.1';
+            let currentModel = 'gpt-5'; // Default to GPT-5
             let isDeepSearchMode = false;
             let chats = JSON.parse(localStorage.getItem('aiChats')) || {};
             let customInstructions = localStorage.getItem('customInstructions') || '';
             let recognition = null;
             let currentImageUrl = null;
             
-            // Model endpoints mapping - FIXED GEMINI ROUTES
+            // Model endpoints mapping - UPDATED WITH GPT-5 MODELS
             const modelEndpoints = {
+                // GPT-5 Family
+                'gpt-5': '/api/generate-gpt5',
+                'gpt-5-mini': '/api/generate-gpt5-mini',
+                'gpt-5-nano': '/api/generate-gpt5-nano',
+                
+                // Existing Models
                 'gpt-4.1': '/api/generate-gpt4.1',
                 'gpt-40-mini': '/api/generate-gpt40-mini', 
                 'gemini2.5-pro': '/api/generate-gemini2.5-pro',
