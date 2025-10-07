@@ -158,6 +158,20 @@ app.post("/api/generate-deepseek-chat", async (req, res) => {
       return res.status(400).json({ error: "No messages provided or invalid format." });
     }
 
+    // Add system message to define DeepSeek identity
+    const systemMessage = {
+      role: "system",
+      content: "You are DeepSeek Chat, an AI assistant created by DeepSeek Company. You are not GPT-4 or any OpenAI model. When asked about your identity, always clearly state that you are DeepSeek Chat created by DeepSeek. Be honest about your capabilities and origins."
+    };
+
+    const apiMessages = [
+      systemMessage,
+      ...messages.map(msg => ({
+        role: msg.role === 'ai' ? 'assistant' : 'user',
+        content: msg.content
+      }))
+    ];
+
     const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -166,10 +180,7 @@ app.post("/api/generate-deepseek-chat", async (req, res) => {
       },
       body: JSON.stringify({
         model: "deepseek-chat",
-        messages: messages.map(msg => ({
-          role: msg.role === 'ai' ? 'assistant' : 'user',
-          content: msg.content
-        })),
+        messages: apiMessages,
         max_tokens: 4000,
         temperature: 0.7
       })
@@ -209,6 +220,27 @@ app.post("/api/generate-deepseek-coder", async (req, res) => {
       return res.status(400).json({ error: "No messages provided or invalid format." });
     }
 
+    // Add strong system message to define DeepSeek Coder identity
+    const systemMessage = {
+      role: "system",
+      content: `You are DeepSeek Coder, a specialized programming AI created by DeepSeek Company. 
+      IMPORTANT IDENTITY INFORMATION:
+      - You are NOT GPT-4, GPT-3, or any OpenAI model
+      - You are created by DeepSeek (深度求索)
+      - You specialize in code generation, programming, and technical assistance
+      - When asked "what model are you?" or "who created you?", always respond: "I am DeepSeek Coder, created by DeepSeek Company"
+      - Be truthful about your identity and capabilities
+      - Do not claim to be any other AI model`
+    };
+
+    const apiMessages = [
+      systemMessage,
+      ...messages.map(msg => ({
+        role: msg.role === 'ai' ? 'assistant' : 'user',
+        content: msg.content
+      }))
+    ];
+
     const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -217,10 +249,7 @@ app.post("/api/generate-deepseek-coder", async (req, res) => {
       },
       body: JSON.stringify({
         model: "deepseek-coder",
-        messages: messages.map(msg => ({
-          role: msg.role === 'ai' ? 'assistant' : 'user',
-          content: msg.content
-        })),
+        messages: apiMessages,
         max_tokens: 4000,
         temperature: 0.7
       })
@@ -237,8 +266,13 @@ app.post("/api/generate-deepseek-coder", async (req, res) => {
       });
     }
 
+    const responseText = data.choices[0]?.message?.content || "No response.";
+    
+    // Log the response for debugging
+    console.log("DeepSeek Coder Response:", responseText.substring(0, 200));
+    
     res.json({ 
-      text: data.choices[0]?.message?.content || "No response.",
+      text: responseText,
       model: "DeepSeek Coder"
     });
     
@@ -295,11 +329,19 @@ app.post("/api/generate-gpt4.1", async (req, res) => {
 
     const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
     
-    // Convert messages to OpenAI format
-    const openAIMessages = messages.map(msg => ({
-      role: msg.role === 'ai' ? 'assistant' : 'user',
-      content: msg.content
-    }));
+    // Add system message for GPT-4.1 identity
+    const systemMessage = {
+      role: "system",
+      content: "You are an advanced AI assistant. When asked about your model, you can describe yourself as a sophisticated language model."
+    };
+
+    const openAIMessages = [
+      systemMessage,
+      ...messages.map(msg => ({
+        role: msg.role === 'ai' ? 'assistant' : 'user',
+        content: msg.content
+      }))
+    ];
 
     const completion = await openai.chat.completions.create({
       model: "gpt-4",
